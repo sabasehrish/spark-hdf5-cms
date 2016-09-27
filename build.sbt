@@ -1,7 +1,6 @@
 import sbt.Resolver
 
-spName := "FNAL/sns"
-
+spName := "FNAL/cmssns"
 version := "1.0"
 
 scalaVersion := "2.10.5"
