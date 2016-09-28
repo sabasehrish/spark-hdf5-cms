@@ -19,135 +19,9 @@ import scala.collection.mutable.ArrayBuffer
 import ncsa.hdf.hdf5lib.H5
 import ncsa.hdf.hdf5lib.HDF5Constants
 import Filters._
+import H5Read._
+
 object skimslim {
-
-  private def getListOfFiles(dir: String):List[File] = {
-    val d = new File(dir)
-    if (d.exists && d.isDirectory) {
-      d.listFiles.filter(_.isFile).toList
-    } else {
-      List[File]()
-    }
-  }
- case class PartitionInfo(fname: String, begin: Long, end: Long)
-
-  private def getPartitionInfo(dname: String, ds_name: String): Array[PartitionInfo] = {
-    val defaultchunk = 100000
-    val files = getListOfFiles(dname)
-    val arrayBuf = ArrayBuffer[PartitionInfo]()
-    for (file <- files) {
-       val file_id = H5.H5Fopen(dname+file.getName, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT)
-       val dsetid = H5.H5Dopen(file_id, ds_name, HDF5Constants.H5P_DEFAULT)
-       val sz = Array[Long](0)
-       val dspaceid = H5.H5Dget_space(dsetid)
-       H5.H5Sget_simple_extent_dims(dspaceid, sz, null)
-       val arrlen = sz(0).toInt
-       if (arrlen < defaultchunk) {
-         arrayBuf+=PartitionInfo(file.getName, 0, arrlen)
-       } else {
-       val numchunks = arrlen/defaultchunk
-       var sindex = 0
-       var eindex = defaultchunk
-       //println("Array Length: "+arrlen+ ", "+ numchunks)
-       for (j <- 0 to numchunks-1) {
-         //println(file.getName+", " + sindex + ", " + (eindex-1))
-         arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
-         sindex = eindex
-         eindex = eindex + defaultchunk
-       }
-       eindex = eindex-defaultchunk+arrlen%defaultchunk
-     //  println(file.getName+", " + sindex + ", "+ eindex)
-       arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
-       }
-    }
-    return arrayBuf.toArray
-  }
-
-  /*Reading Dataset from HDF5 files*/
-  def readDataset[T:ClassTag](dsetid: Int, datatype: Int, begin: Long, end: Long) : Array[T] = {
-      val result = Array.ofDim[T]((end-begin).toInt)
-      val memtype_id = H5.H5Tcopy(datatype)
-     // H5.H5Tset_size(memtype_id, sdim)
-      var offset = Array[Long](begin)
-      var stride = Array[Long](1)
-      var blocksize = Array[Long](1)
-      var count = Array[Long](end-begin)
-      val filespace_id = H5.H5Dget_space(dsetid)
-      H5.H5Sselect_hyperslab(filespace_id, HDF5Constants.H5S_SELECT_SET,
-                            offset, stride, count, null)
-
-
-      val memspace_id = H5.H5Screate_simple(1, count, null)
-       H5.H5Dread(dsetid, datatype,
-                                memspace_id, filespace_id, HDF5Constants.H5P_DEFAULT,
-                                result)
-     // H5.H5Dread(dsetid, datatype,  HDF5Constants.H5S_ALL, HDF5Constants.H5S_ALL,
-       //            HDF5Constants.H5P_DEFAULT, result)
-      return result
-   }
-
-  def transposeArrayOfRow(arr: Array[Row], gname: String) : Array[Row] = {
-    var tarr = new Array[Row](arr(0).length)
-    //println(tarr.getClass)
-    gname match {
-      case "/Muon/" => {
-                      for (i <- 0 to (arr(0).length -1)) {
-                        tarr(i) = Row(arr(0).getFloat(i), arr(1).getFloat(i), arr(2).getFloat(i), arr(3).getInt(i), arr(4).getInt(i), arr(5).getInt(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getInt(i))
-                      }
-      }
-      case "/Tau/"  => {
-                      for (i <- 0 to (arr(0).length -1)) {
-                        tarr(i) = Row(arr(0).getFloat(i), arr(1).getFloat(i), arr(2).getFloat(i), arr(3).getInt(i), arr(4).getInt(i), arr(5).getInt(i),arr(6).getLong(i), arr(7).getFloat(i))
-                      }
-}
-      case "/Info/"  => {
-                      for (i <- 0 to (arr(0).length -1)) {
-                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getInt(i), arr(4).getFloat(i), arr(5).getFloat(i), arr(6).getFloat(i), arr(7).getFloat(i))
-
-                      }
-      } //end of case for Info
-      case "/GenEvtInfo/"  => {  for (i <- 0 to (arr(0).length -1)) {
-                                   tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i))
-                                 }
-                              } // end of case for GenEvtInfo
-                } //end of match
-    return tarr
-  }
-
-  def readDatasets(fname: String, gname: String, dslist: List[String], begin: Long, end: Long): Array[Row] = {
-    val file_id = H5.H5Fopen(fname, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT)
-    val arrayBuf = ArrayBuffer[Row]()
-    if (file_id >= 0) {
-    for (dsname <- dslist) {
-      val dsetid = H5.H5Dopen(file_id, gname+dsname, HDF5Constants.H5P_DEFAULT)
-      if (dsetid >= 0) {
-      val datatype = H5.H5Dget_type(dsetid)
-      val dclass = H5.H5Tget_class_name(H5.H5Tget_class(datatype))
-      val sz = Array[Long](0)
-      val dspaceid = H5.H5Dget_space(dsetid)
-      H5.H5Sget_simple_extent_dims(dspaceid, sz, null)
-      val result = dclass match {
-        case "H5T_INTEGER" => if (dsname == "Tau.hpsDisc") {readDataset[Long](dsetid, datatype, begin, end)} else readDataset[Int](dsetid, datatype, begin, end)
-        case "H5T_FLOAT" => readDataset[Float](dsetid, datatype, begin, end)
-        case "H5T_LONG" => readDataset[Long](dsetid, datatype, begin, end)
-      }
-      val row =  Row.fromSeq(result.toSeq)
-      arrayBuf += row
-      //println("assigning row to res: "+ row.length)
-      H5.H5Dclose(dsetid)
-      println("Closed the dataset: "+ dsname + ", "+ dsetid)
-      }
-    }
-    }
-    H5.H5Fclose(file_id)
-    val tres = transposeArrayOfRow(arrayBuf.toArray, gname)
-    println("finished transpose for: ", gname)
-    return tres
-  }
-
-  def generateColnames(dsnames: List[String]) : Seq[String] = {
-    return dsnames.map(x => x.replace(".","_")).toSeq
-  }
 
   /*Creating Spark DataFrame from HDF5 Datasets */
   def createDataFrame(rdd: RDD[Row], spark: SparkSession, dname: String, gname: String, dsnames: List[String]) : DataFrame = {
@@ -178,12 +52,11 @@ object skimslim {
     val sc = new SparkContext()
     val spark = SparkSession.builder().appName("Skimming").getOrCreate()
 
-    /*Dir path to operate on, will move out as an input argument*/
     if(args.length != 1){
       println("Missing input directory name")
     } else {
     val dname = args(0) 
-//"/global/cscratch1/sd/ssehrish/h5Files/TTJets_13TeV_amcatnloFXFX_pythia8_2/TTJets_13TeV_amcatnloFXFX_pythia8_2/"
+
     /*GenEvtInfo Group*/
     val genevtinfo_ds: List[String] = List("GenEvtInfo.runNum", "GenEvtInfo.lumisec", "GenEvtInfo.evtNum", "weight", "scalePDF")
     val gname = "/GenEvtInfo/"
