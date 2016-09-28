@@ -27,7 +27,7 @@ object Filters {
   // which is not doing anything in this filter so I havenot implmented 
   // it
   var taupassUDF = udf {
-    (hpsDisc: Long, rawIso3Hits: Float) => ((hpsDisc.toInt & 2) != 0) && (rawIso3Hits <= 5)
+    (hpsDisc: Long, rawIso3Hits: Float) => ((hpsDisc.toInt & 2) == 0) && (rawIso3Hits <= 5)
   }
 
   def filterTauDF(spark: SparkSession, tau_df: DataFrame) : DataFrame = {
