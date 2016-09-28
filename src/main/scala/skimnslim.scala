@@ -5,7 +5,7 @@ import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql
-import org.apache.spark.sql.{SQLContext, Row, DataFrame}
+import org.apache.spark.sql.{Row, DataFrame}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.SparkFiles
@@ -18,7 +18,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import ncsa.hdf.hdf5lib.H5
 import ncsa.hdf.hdf5lib.HDF5Constants
-
+import Filters._
 object skimslim {
 
   private def getListOfFiles(dir: String):List[File] = {
@@ -61,20 +61,6 @@ object skimslim {
        }
     }
     return arrayBuf.toArray
-  }
-
-/*  def filterMuondf(sqlC: SQLContext, muons: DataFrame) : DataFrame = {
-    import sqlC.implicits._
-    muons.registerTempTable("muons")
-    val sqlDF = sqlC.sql("SELECT Muon_runNum, Muon_lumisec, Muon_evtNum FROM muons WHERE Muon_pt >= 10 and Muon_eta < 2.4")
-    sqlDF.show()
-    sqlDF
-//    return muons.filter($"Muon_pt" >= 10 && $"Muon_eta" < 2.4)  
-  }
-*/
-
-  def filterTaudf(taus: DataFrame) : DataFrame = {
-    return taus.filter("(Tau_hpsDisc & 2) != 0").filter("Tau_rawIso3Hits <= 5")
   }
 
   /*Reading Dataset from HDF5 files*/
@@ -226,7 +212,7 @@ object skimslim {
     muon_df.cache()
     muon_df.show()
     println("Num Muons: " + muon_df.count())
-//    filterMuondf(sqlContext, muon_df)
+//    filterMuondf(spark, muon_df)
     val c = muon_df.groupBy("Muon_evtNum", "Muon_lumisec", "Muon_runNum").max("Muon_pt")
     c.show()*/
     }
