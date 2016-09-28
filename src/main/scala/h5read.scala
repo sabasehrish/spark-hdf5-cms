@@ -51,15 +51,12 @@ object H5Read {
        val numchunks = arrlen/defaultchunk
        var sindex = 0
        var eindex = defaultchunk
-       println("Array Length: "+arrlen+ ", "+ numchunks)
        for (j <- 0 to numchunks-1) {
-         println(file.getName+", " + sindex + ", " + (eindex-1))
          arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
          sindex = eindex
          eindex = eindex + defaultchunk
        }
        eindex = eindex-defaultchunk+arrlen%defaultchunk
-       println(file.getName+", " + sindex + ", "+ eindex)
        arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
        }
     }
@@ -70,7 +67,6 @@ object H5Read {
   def readDataset[T:ClassTag](dsetid: Int, datatype: Int, begin: Long, end: Long) : Array[T] = {
       val result = Array.ofDim[T]((end-begin).toInt)
       val memtype_id = H5.H5Tcopy(datatype)
-     // H5.H5Tset_size(memtype_id, sdim)
       var offset = Array[Long](begin)
       var stride = Array[Long](1)
       var blocksize = Array[Long](1)
@@ -90,15 +86,11 @@ val memspace_id = H5.H5Screate_simple(1, count, null)
 
   def transposeArrayOfRow(arr: Array[Row], gname: String) : Array[Row] = {
     var tarr = new Array[Row](arr(0).length)
-    println(gname)
-    println(arr(0).length)
-    println(arr.length)
     gname match {
       case "/Muon/" => {
                       for (i <- 0 to (arr(0).length -1)) {
                         tarr(i) = Row(arr(0).getFloat(i), arr(1).getFloat(i), arr(2).getFloat(i), arr(3).getInt(i), arr(4).getInt(i), arr(5).getInt(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getInt(i), arr(10).getFloat(i))
                       }
-     // retme = tarr
       }
       case "/Tau/"  => {
                       for (i <- 0 to (arr(0).length -1)) {
@@ -124,7 +116,6 @@ def readDatasets(fname: String, gname: String, dslist: List[String], begin: Long
     val file_id = H5.H5Fopen(fname, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT)
     val arrayBuf = ArrayBuffer[Row]()
     if (file_id >= 0) {
-    println("opened file: " + fname)
     for (dsname <- dslist) {
       val dsetid = H5.H5Dopen(file_id, gname+dsname, HDF5Constants.H5P_DEFAULT)
       if (dsetid >= 0 ) {
@@ -137,7 +128,6 @@ def readDatasets(fname: String, gname: String, dslist: List[String], begin: Long
       val arrlen = sz(0).toInt
       val memtype_id = H5.H5Tcopy(datatype)
       val dsize = H5.H5Tget_size(memtype_id)
-      println(dclass+ ", " +dsname+ ": " + dsize)
       val result = dclass match {
         case "H5T_INTEGER" => dsize match {
                                 case 8 => readDataset[Long](dsetid, datatype, begin, end)
@@ -148,17 +138,13 @@ def readDatasets(fname: String, gname: String, dslist: List[String], begin: Long
       }
       val row =  Row.fromSeq(result.toSeq)
       arrayBuf += row
-      println("assigning row to res: "+ row.length+ ", "+ dsname + ", "+ dsetid)
       H5.H5Dclose(dsetid)
-    println("closed dataset: " + dsname)
+      }
     }
-     }
     H5.H5Fclose(file_id)
-   // println("closed file: " + fname)
     } else println("Cannot open the file")
 
     val tres = transposeArrayOfRow(arrayBuf.toArray, gname)
-    println("after transpose")
     return tres
   }
 
