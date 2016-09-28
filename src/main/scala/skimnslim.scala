@@ -1,5 +1,6 @@
 /*Skim and Slim*/
 import org.apache.spark.SparkContext
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
@@ -47,15 +48,15 @@ object skimslim {
        val numchunks = arrlen/defaultchunk
        var sindex = 0
        var eindex = defaultchunk
-       println("Array Length: "+arrlen+ ", "+ numchunks)
+       //println("Array Length: "+arrlen+ ", "+ numchunks)
        for (j <- 0 to numchunks-1) {
-         println(file.getName+", " + sindex + ", " + (eindex-1))
+         //println(file.getName+", " + sindex + ", " + (eindex-1))
          arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
          sindex = eindex
          eindex = eindex + defaultchunk
        }
        eindex = eindex-defaultchunk+arrlen%defaultchunk
-       println(file.getName+", " + sindex + ", "+ eindex)
+     //  println(file.getName+", " + sindex + ", "+ eindex)
        arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
        }
     }
@@ -101,7 +102,7 @@ object skimslim {
 
   def transposeArrayOfRow(arr: Array[Row], gname: String) : Array[Row] = {
     var tarr = new Array[Row](arr(0).length)
-    println(tarr.getClass)
+    //println(tarr.getClass)
     gname match {
       case "/Muon/" => {
                       for (i <- 0 to (arr(0).length -1)) {
@@ -146,7 +147,7 @@ object skimslim {
       }
       val row =  Row.fromSeq(result.toSeq)
       arrayBuf += row
-      println("assigning row to res: "+ row.length)
+      //println("assigning row to res: "+ row.length)
       H5.H5Dclose(dsetid)
       println("Closed the dataset: "+ dsname + ", "+ dsetid)
       }
@@ -163,12 +164,12 @@ object skimslim {
   }
 
   /*Creating Spark DataFrame from HDF5 Datasets */
-  def createDataFrame(sc: SparkContext, sqlContext: SQLContext, dname: String, gname: String, dsnames: List[String]) : DataFrame = {
+  def createDataFrame(rdd: RDD[Row], spark: SparkSession, dname: String, gname: String, dsnames: List[String]) : DataFrame = {
     val colnames = generateColnames(dsnames)
-    val files = getListOfFiles(dname)
-    val partitionlist = getPartitionInfo(dname, gname+dsnames(0))
-    import sqlContext.implicits._
-    val rdd = sc.parallelize(partitionlist, partitionlist.length).flatMap(x => readDatasets(dname+x.fname, gname, dsnames, x.begin, x.end))
+    //val files = getListOfFiles(dname)
+   // val partitionlist = getPartitionInfo(dname, gname+dsnames(0))
+    import spark.implicits._
+  //  val rdd = sc.parallelize(partitionlist, partitionlist.length).flatMap(x => readDatasets(dname+x.fname, gname, dsnames, x.begin, x.end))
     var df = gname match {
                           case "/Muon/" => rdd.map(x => MuonRow(x.getFloat(0), x.getFloat(1), x.getFloat(2), x.getInt(3), x.getInt(4), x.getInt(5), x.getFloat(6), x.getFloat(7), x.getFloat(8), x.getInt(9)))
                                               .toDF(colnames: _*)
@@ -189,34 +190,40 @@ object skimslim {
 
   def main(args: Array[String]) {
     val sc = new SparkContext()
-    val sqlContext = new SQLContext(sc)
-    import sqlContext.implicits._
+    val spark = SparkSession.builder().appName("Skimming").getOrCreate()
 
     /*Dir path to operate on, will move out as an input argument*/
     val dname = "/global/cscratch1/sd/ssehrish/h5Files/TTJets_13TeV_amcatnloFXFX_pythia8_2/TTJets_13TeV_amcatnloFXFX_pythia8_2/"
     /*GenEvtInfo Group*/
     val genevtinfo_ds: List[String] = List("GenEvtInfo.runNum", "GenEvtInfo.lumisec", "GenEvtInfo.evtNum", "weight", "scalePDF")
-    val genevtinfo_df = createDataFrame(sc, sqlContext, dname, "/GenEvtInfo/", genevtinfo_ds)
+    val gname = "/GenEvtInfo/"
+    val partitionlist = getPartitionInfo(dname, gname+genevtinfo_ds(0))
+    val rdd = sc.parallelize(partitionlist, partitionlist.length).flatMap(x => readDatasets(dname+x.fname, gname, genevtinfo_ds, x.begin, x.end))
+    val genevtinfo_df = createDataFrame(rdd, spark, dname, "/GenEvtInfo/", genevtinfo_ds)
+    genevtinfo_df.cache()
+    var t0 = System.nanoTime()
     val sumWeights =  genevtinfo_df.agg(sum("weight")).first.get(0)
-    println("Sum of Weights: " + sumWeights)
+    var t1 = System.nanoTime()
+    println("Sum of Weights is: " + sumWeights)
+    println("It took :" + (t1 - t0) +" ns to calculate the weight")
     println("Num events: " + genevtinfo_df.count())
     
     /*Tau Group*/
-    val tau_ds: List[String] = List("Tau.eta", "Tau.pt", "Tau.phi", "Tau.evtNum", "Tau.runNum", "Tau.lumisec", "Tau.hpsDisc", "Tau.rawIso3Hits")
-    val tau_df = createDataFrame(sc, sqlContext, dname, "/Tau/", tau_ds)
+    /*val tau_ds: List[String] = List("Tau.eta", "Tau.pt", "Tau.phi", "Tau.evtNum", "Tau.runNum", "Tau.lumisec", "Tau.hpsDisc", "Tau.rawIso3Hits")
+    val tau_df = createDataFrame(sc, spark, dname, "/Tau/", tau_ds)
     tau_df.cache()
     println("Num Taus: "+tau_df.count())
     val d = tau_df.groupBy("Tau_evtNum", "Tau_lumisec", "Tau_runNum").max("Tau_pt")
     d.show()
-
+*/
     /*Operations on Muon group*/
-    val muon_ds: List[String] = List("Muon.eta", "Muon.pt", "Muon.phi", "Muon.evtNum", "Muon.runNum", "Muon.lumisec", "Muon.chHadIso", "Muon.neuHadIso", "Muon.puIso", "Muon.pogIDBits")
-    val muon_df = createDataFrame(sc, sqlContext, dname, "/Muon/", muon_ds)
+  /*  val muon_ds: List[String] = List("Muon.eta", "Muon.pt", "Muon.phi", "Muon.evtNum", "Muon.runNum", "Muon.lumisec", "Muon.chHadIso", "Muon.neuHadIso", "Muon.puIso", "Muon.pogIDBits")
+    val muon_df = createDataFrame(sc, spark, dname, "/Muon/", muon_ds)
     muon_df.cache()
     muon_df.show()
     println("Num Muons: " + muon_df.count())
 //    filterMuondf(sqlContext, muon_df)
     val c = muon_df.groupBy("Muon_evtNum", "Muon_lumisec", "Muon_runNum").max("Muon_pt")
-    c.show()
+    c.show()*/
   }
 }
