@@ -193,7 +193,11 @@ object skimslim {
     val spark = SparkSession.builder().appName("Skimming").getOrCreate()
 
     /*Dir path to operate on, will move out as an input argument*/
-    val dname = "/global/cscratch1/sd/ssehrish/h5Files/TTJets_13TeV_amcatnloFXFX_pythia8_2/TTJets_13TeV_amcatnloFXFX_pythia8_2/"
+    if(args.length != 1){
+      println("Missing input directory name")
+    } else {
+    val dname = args(0) 
+//"/global/cscratch1/sd/ssehrish/h5Files/TTJets_13TeV_amcatnloFXFX_pythia8_2/TTJets_13TeV_amcatnloFXFX_pythia8_2/"
     /*GenEvtInfo Group*/
     val genevtinfo_ds: List[String] = List("GenEvtInfo.runNum", "GenEvtInfo.lumisec", "GenEvtInfo.evtNum", "weight", "scalePDF")
     val gname = "/GenEvtInfo/"
@@ -225,5 +229,6 @@ object skimslim {
 //    filterMuondf(sqlContext, muon_df)
     val c = muon_df.groupBy("Muon_evtNum", "Muon_lumisec", "Muon_runNum").max("Muon_pt")
     c.show()*/
+    }
   }
 }
