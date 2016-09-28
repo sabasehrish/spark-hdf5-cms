@@ -3,7 +3,7 @@ import sbt.Resolver
 spName := "FNAL/cmssns"
 version := "1.0"
 
-scalaVersion := "2.10.5"
+scalaVersion := "2.11.0"
 
 sparkVersion := "2.0.0"
 
