@@ -70,6 +70,17 @@ object skimslim {
     println("Sum of Weights is: " + sumWeights)
     println("It took :" + (t1 - t0) +" ns to calculate the weight")
     println("Num events: " + genevtinfo_df.count())
+
+     /*Tau DF related operations*/
+    val tau_gn = "/Tau/"
+    val tau_ds: List[String] = List("Tau.eta", "Tau.pt", "Tau.phi", "Tau.evtNum", "Tau.runNum", "Tau.lumisec", "Tau.hpsDisc", "Tau.rawIso3Hits")
+    val tau_pl = getPartitionInfo(dname, tau_gn+"Tau.eta")
+    val tau_rdd = sc.parallelize(tau_pl, tau_pl.length).flatMap(x=> readDatasets(dname+x.fname, tau_gn, tau_ds, x.begin, x.end))
+    val tau_df = createDataFrame(tau_rdd, spark, dname, tau_gn, tau_ds)
+    tau_df.show()
+    val tau_fdf = filterTauDF(spark, tau_df)
+    val tdf = tau_fdf.groupBy("Tau_evtNum", "Tau_lumisec", "Tau_runNum").max("Tau_pt")
+    tdf.show()
     
     /*Tau Group*/
     /*val tau_ds: List[String] = List("Tau.eta", "Tau.pt", "Tau.phi", "Tau.evtNum", "Tau.runNum", "Tau.lumisec", "Tau.hpsDisc", "Tau.rawIso3Hits")
