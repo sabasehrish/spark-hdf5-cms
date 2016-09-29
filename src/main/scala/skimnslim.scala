@@ -64,12 +64,12 @@ object skimslim {
     val rdd = sc.parallelize(partitionlist, partitionlist.length).flatMap(x => readDatasets(dname+x.fname, gname, genevtinfo_ds, x.begin, x.end))
     val genevtinfo_df = createDataFrame(rdd, spark, dname, "/GenEvtInfo/", genevtinfo_ds)
     genevtinfo_df.cache()
+    println("Num events: " + genevtinfo_df.count())
     var t0 = System.nanoTime()
     val sumWeights =  genevtinfo_df.agg(sum("weight")).first.get(0)
     var t1 = System.nanoTime()
     println("Sum of Weights is: " + sumWeights)
     println("It took :" + (t1 - t0) +" ns to calculate the weight")
-    println("Num events: " + genevtinfo_df.count())
 
      /*Tau DF related operations*/
     val tau_gn = "/Tau/"
