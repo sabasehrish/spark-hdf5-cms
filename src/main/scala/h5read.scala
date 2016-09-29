@@ -97,7 +97,28 @@ val memspace_id = H5.H5Screate_simple(1, count, null)
                         tarr(i) = Row(arr(0).getFloat(i), arr(1).getFloat(i), arr(2).getFloat(i), arr(3).getInt(i), arr(4).getInt(i), arr(5).getInt(i),arr(6).getLong(i), arr(7).getFloat(i))
                       }
       }
-     case "/Info/"  => {
+      case "/Photon/" => {
+                      for (i <- 0 to (arr(0).length -1)) {
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i))
+                      }
+      }
+     case "/Electron/" => {
+                      for (i <- 0 to (arr(0).length -1)) {
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i), arr(12).getFloat(i), arr(13).getFloat(i), arr(14).getFloat(i), arr(15).getFloat(i), arr(16).getFloat(i), arr(17).getFloat(i), arr(18).getInt(i), arr(19).getShort(i))
+                      }
+      }
+     case "/AK4Puppi/" => {
+                      for (i <- 0 to (arr(0).length -1)) {
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getInt(i), arr(11).getInt(i))
+                      }
+      }
+     case "/CA15Puppi/" => {
+                      for (i <- 0 to (arr(0).length -1)) {
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getInt(i), arr(11).getInt(i))
+                      }
+      }
+
+      case "/Info/"  => {
                       for (i <- 0 to (arr(0).length -1)) {
                         tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getInt(i), arr(4).getFloat(i), arr(5).getFloat(i), arr(6).getFloat(i), arr(7).getFloat(i))
 
@@ -135,6 +156,7 @@ def readDatasets(fname: String, gname: String, dslist: List[String], begin: Long
                                 case 1 => readDataset[Boolean](dsetid, datatype, begin, end)
                               }
         case "H5T_FLOAT" => readDataset[Float](dsetid, datatype, begin, end)
+        case "H5T_ENUM" => readDataset[Short](dsetid, datatype, begin, end)
       }
       val row =  Row.fromSeq(result.toSeq)
       arrayBuf += row

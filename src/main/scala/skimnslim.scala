@@ -35,6 +35,7 @@ object skimslim {
                                               .toDF(colnames: _*)
                           case "/Tau/"  => rdd.map(x => TauRow(x.getFloat(0), x.getFloat(1), x.getFloat(2), x.getInt(3), x.getInt(4), x.getInt(5), x.getLong(6), x.getFloat(7)))
                                               .toDF(colnames: _*)
+                          case "/Photon/"  => rdd.map(x => PhotonRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getFloat(3), x.getFloat(4), x.getFloat(5), x.getFloat(6), x.getFloat(7), x.getFloat(8), x.getFloat(9), x.getFloat(10), x.getFloat(11))).toDF(colnames: _*)
                           case "/Info/" => rdd.map(x => InfoRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getInt(3), x.getFloat(4), x.getFloat(5), x.getFloat(6), x.getFloat(7))).toDF(colnames: _*)
                           case "/GenEvtInfo/" => rdd.map(x => GenInfoRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getFloat(3), x.getFloat(4))).toDF(colnames: _*)
 
@@ -46,7 +47,7 @@ object skimslim {
   case class TauRow(eta: Float, pt: Float, phi: Float, evtNum: Int, runNum: Int, lumisec:Int, hpsDisc: Long, rawIso3Hits: Float)
   case class InfoRow(runNum: Int, lumiSec: Int, evtNum: Int, metFilterFailBits: Int, pfMET: Float, pfMETphi: Float, puppET: Float, puppETphi: Float)
   case class GenInfoRow(runNum: Int, lumisec: Int, evtNum: Int, weight: Float, scalePDF:Float)
-
+  case class PhotonRow(runNum: Int, lumisec: Int, evtNum: Int, eta: Float, pt: Float, phi: Float, chHadIso: Float, scEta: Float, neuHadIso: Float, gammaIso: Float, sieie: Float, sthovere: Float)
 
   def main(args: Array[String]) {
     val sc = new SparkContext()
@@ -82,23 +83,14 @@ object skimslim {
     val tdf = tau_fdf.groupBy("Tau_evtNum", "Tau_lumisec", "Tau_runNum").max("Tau_pt")
     tdf.show()
     
-    /*Tau Group*/
-    /*val tau_ds: List[String] = List("Tau.eta", "Tau.pt", "Tau.phi", "Tau.evtNum", "Tau.runNum", "Tau.lumisec", "Tau.hpsDisc", "Tau.rawIso3Hits")
-    val tau_df = createDataFrame(sc, spark, dname, "/Tau/", tau_ds)
-    tau_df.cache()
-    println("Num Taus: "+tau_df.count())
-    val d = tau_df.groupBy("Tau_evtNum", "Tau_lumisec", "Tau_runNum").max("Tau_pt")
-    d.show()
-*/
-    /*Operations on Muon group*/
-  /*  val muon_ds: List[String] = List("Muon.eta", "Muon.pt", "Muon.phi", "Muon.evtNum", "Muon.runNum", "Muon.lumisec", "Muon.chHadIso", "Muon.neuHadIso", "Muon.puIso", "Muon.pogIDBits")
-    val muon_df = createDataFrame(sc, spark, dname, "/Muon/", muon_ds)
-    muon_df.cache()
-    muon_df.show()
-    println("Num Muons: " + muon_df.count())
-//    filterMuondf(spark, muon_df)
-    val c = muon_df.groupBy("Muon_evtNum", "Muon_lumisec", "Muon_runNum").max("Muon_pt")
-    c.show()*/
+    /*Photon DF related operations*/
+    val pho_gn = "/Photon/"
+    val pho_ds: List[String] = List("Photon.runNum", "Photon.lumisec", "Photon.evtNum", "Photon.eta", "Photon.pt", "Photon.phi", "Photon.chHadIso", "Photon.scEta", "Photon.neuHadIso", "Photon.gammaIso", "Photon.sieie", "Photon.sthovere")
+    val pho_pl = getPartitionInfo(dname, pho_gn+"Photon.eta")
+    val pho_rdd = sc.parallelize(pho_pl, pho_pl.length).flatMap(x=> readDatasets(dname+x.fname, pho_gn, pho_ds, x.begin, x.end))
+    val pho_df = createDataFrame(pho_rdd, spark, dname, pho_gn, pho_ds)
+    pho_df.show()
+
     }
   }
 }
