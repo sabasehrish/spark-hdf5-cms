@@ -40,4 +40,21 @@ object Filters {
     fdf1.show()
     fdf1
   }
+
+  /*Filters for Jet and VJet*/
+  //Fix this filter
+  var jetpassUDF = udf {
+    (neuHadFrac: Float, neuEmFrac: Float, nParticles: Int, eta: Float, chHadFrac: Float, nCharged: Int, chEmFrac: Float) => {
+       (neuHadFrac >= 0.99) || neuEmFrac >= 0.99 || nParticles <= 1 || ((eta < 2.4 && eta > -2.4) && (chHadFrac == 0 || nCharged == 0 || chEmFrac >= 0.99))
+    }
+  }
+  def filterJetDF(spark: SparkSession, jet_df: DataFrame) : DataFrame = {
+    import spark.implicits._
+    val fdf = jet_df.withColumn("passfilter", jetpassUDF($"AK4Puppi_neuHadFrac", $"AK4Puppi_neuEmFrac", $"AK4Puppi_nParticles", $"AK4Puppi_eta", $"AK4Puppi_chHadFrac", $"AK4Puppi_nCharged", $"AK4Puppi_chEmFrac"))
+    fdf.show()
+    fdf.createOrReplaceTempView("Jets")
+    val fdf1 = spark.sql("SELECT * FROM Jets WHERE AK4Puppi_pt >=30 and AK4Puppi_eta < 4.5 and AK4Puppi_eta > -4.5 and passfilter")
+    fdf1.show()
+    fdf1
+  }
 }
