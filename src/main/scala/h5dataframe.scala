@@ -21,7 +21,7 @@ object H5DataFrame {
                           case "/Electron/"  => rdd.map(x => ElectronRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getFloat(3), x.getFloat(4), x.getFloat(5), x.getFloat(6), x.getFloat(7), x.getFloat(8), x.getFloat(9), x.getFloat(10), x.getFloat(11), x.getFloat(12), x.getFloat(13), x.getFloat(14), x.getFloat(15), x.getFloat(16), x.getFloat(17), x.getInt(18), x.getByte(19))).toDF(colnames: _*)
                           case "/AK4Puppi/"  => rdd.map(x => JetRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getFloat(3), x.getFloat(4), x.getFloat(5), x.getFloat(6), x.getFloat(7), x.getFloat(8), x.getFloat(9), x.getInt(10), x.getInt(11))).toDF(colnames: _*)
                           case "/CA15Puppi/"  => rdd.map(x => VJetRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getFloat(3), x.getFloat(4), x.getFloat(5), x.getFloat(6), x.getFloat(7), x.getFloat(8), x.getFloat(9), x.getInt(10), x.getInt(11))).toDF(colnames: _*)
-                          case "/Info/" => rdd.map(x => InfoRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getInt(3), x.getFloat(4), x.getFloat(5), x.getFloat(6), x.getFloat(7))).toDF(colnames: _*)
+                          case "/Info/" => rdd.map(x => InfoRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getFloat(3), x.getInt(4), x.getFloat(5), x.getFloat(6), x.getFloat(7), x.getFloat(8))).toDF(colnames: _*)
                           case "/GenEvtInfo/" => rdd.map(x => GenInfoRow(x.getInt(0), x.getInt(1), x.getInt(2), x.getFloat(3), x.getFloat(4))).toDF(colnames: _*)
     }
     return df
@@ -29,7 +29,7 @@ object H5DataFrame {
 
   case class MuonRow(eta: Float, pt: Float, phi: Float, evtNum: Int, runNum: Int, lumisec:Int, chHadIso: Float, neuHadIso: Float, puIso: Float, pogIDBits: Int, gammaIso: Float)
   case class TauRow(eta: Float, pt: Float, phi: Float, evtNum: Int, runNum: Int, lumisec:Int, hpsDisc: Long, rawIso3Hits: Float)
-  case class InfoRow(runNum: Int, lumiSec: Int, evtNum: Int, metFilterFailBits: Int, pfMET: Float, pfMETphi: Float, puppET: Float, puppETphi: Float)
+  case class InfoRow(runNum: Int, lumiSec: Int, evtNum: Int, rhoIso: Float, metFilterFailBits: Int, pfMET: Float, pfMETphi: Float, puppET: Float, puppETphi: Float)
   case class GenInfoRow(runNum: Int, lumisec: Int, evtNum: Int, weight: Float, scalePDF:Float)
   case class PhotonRow(runNum: Int, lumisec: Int, evtNum: Int, eta: Float, pt: Float, phi: Float, chHadIso: Float, scEta: Float, neuHadIso: Float, gammaIso: Float, sieie: Float, sthovere: Float)
   // 19 datasets from Electron Branch!!!

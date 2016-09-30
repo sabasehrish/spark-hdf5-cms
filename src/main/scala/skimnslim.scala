@@ -38,12 +38,19 @@ object SkimWF {
     tdf.show()
     
     /*Photon DF related operations*/
-    val pho_gn = "/Photon/"
+/*    val pho_gn = "/Photon/"
     val pho_ds: List[String] = List("Photon.runNum", "Photon.lumisec", "Photon.evtNum", "Photon.eta", "Photon.pt", "Photon.phi", "Photon.chHadIso", "Photon.scEta", "Photon.neuHadIso", "Photon.gammaIso", "Photon.sieie", "Photon.sthovere")
     val pho_pl = getPartitionInfo(dname, pho_gn+"Photon.eta")
     val pho_rdd = sc.parallelize(pho_pl, pho_pl.length).flatMap(x=> readDatasets(dname+x.fname, pho_gn, pho_ds, x.begin, x.end))
     val pho_df = createDataFrame(spark, pho_rdd, pho_gn, pho_ds)
     pho_df.show()
+*/
+    /*Info DataFrame*/
+    val info_gn = "/Info/"
+    val info_ds: List[String] = List("runNum", "lumiSec", "evtNum", "rhoIso", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
+    val info_pl = getPartitionInfo(dname, info_gn+"evtNum")
+    val info_rdd = sc.parallelize(info_pl, info_pl.length).flatMap(x=> readDatasets(dname+x.fname, info_gn, info_ds, x.begin, x.end))
+    val info_df = createDataFrame(spark, info_rdd, info_gn, info_ds)
 
     /*Electron DF related operations*/
     val elec_gn = "/Electron/"
@@ -51,7 +58,10 @@ object SkimWF {
     val elec_pl = getPartitionInfo(dname, elec_gn+"Electron.eta")
     val elec_rdd = sc.parallelize(elec_pl, elec_pl.length).flatMap(x=> readDatasets(dname+x.fname, elec_gn, elec_ds, x.begin, x.end))
     val elec_df = createDataFrame(spark, elec_rdd, elec_gn, elec_ds)
-    elec_df.show()
+    info_df.createOrReplaceTempView("InfoDF")
+    elec_df.createOrReplaceTempView("Tdf")
+    val ftdf = spark.sql("SELECT * FROM InfoDF, Tdf WHERE InfoDF.evtNum == Tdf.Electron_evtNum and InfoDF.lumiSec == Tdf.Electron_lumisec and infoDF.runNum == Tdf.Electron_runNum").drop("Electron_runNum", "Electron_evtNum", "Electron_lumisec", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
+    val d = filterElectronDF(spark, ftdf)
 
    /*Jet DF Operation*/
     val jet_gn = "/AK4Puppi/"
