@@ -50,6 +50,44 @@ object Filters {
     return eff_area(index)
   }
 
+  /*Filters for Photon DF*/
+    var photonpassUDF = udf {
+    (chHadIso: Float, neuHadIso: Float, gammaIso: Float, scEta: Float, sthovere: Float, sieie: Float, pt: Float, rhoarea0: Float, rhoarea1: Float, rhoarea2: Float) => {
+      val chiso = Math.max((chHadIso - rhoarea0), 0.0)
+      val neuiso = Math.max((neuHadIso - rhoarea1), 0.0)
+      val phoiso = Math.max((gammaIso - rhoarea2), 0.0)
+
+      if (sthovere <= 0.05) true
+      (Math.abs(scEta) <= 1.479 && ((sieie    <= 0.0103) ||
+                                    (chiso <= 2.44) ||
+                                    (neuiso <= (2.57 + Math.exp(0.0044*pt*0.5809))) ||
+                                    (phoiso <= (1.92+0.0043*pt)))) ||
+      (Math.abs(scEta) > 1.479 &&  ((sieie    <= 0.0277) ||
+                                    (chiso <= 1.84) ||
+                                    (neuiso <= (4.00 + Math.exp(0.0040*pt*0.9402))) ||
+                                    (phoiso <= (2.15+0.0041*pt))))
+    }
+  }
+  
+  def rhoeffareaPhoUDF(eta_range: Array[Float], eff_area:Array[Float]) = udf ((rho:Float, eta: Float) => rho*EffArea(eta, eta_range, eff_area))
+ 
+  def filterPhotonDF(spark: SparkSession, photon_df: DataFrame) : DataFrame = {
+    import spark.implicits._
+    val eta_range = Array(0.0f, 1.0f, 1.479f, 2.0f, 2.2f, 2.3f, 2.4f)
+    val eff_area_0 = Array(0.0157f, 0.0143f, 0.0115f, 0.0094f, 0.0095f, 0.0068f, 0.0053f)
+    val eff_area_1 = Array(0.0143f, 0.0210f, 0.0147f, 0.0082f, 0.0124f, 0.0186f, 0.0320f)
+    val eff_area_2 = Array(0.0725f, 0.0604f, 0.0320f, 0.0512f, 0.0766f, 0.0949f, 0.1160f)
+    var fdf = photon_df.withColumn("rhoArea0", rhoeffareaPhoUDF(eta_range, eff_area_0)($"rhoIso", $"Photon_sceta"))
+    fdf = fdf.withColumn("rhoArea1", rhoeffareaPhoUDF(eta_range, eff_area_1)($"rhoIso", $"Photon_sceta"))
+    fdf = fdf.withColumn("rhoArea2", rhoeffareaPhoUDF(eta_range, eff_area_2)($"rhoIso", $"Photon_sceta"))
+    fdf = fdf.withColumn("passfilter", photonpassUDF($"Photon_chHadIso", $"Photon_neuHadIso", $"Photon_gammaIso", $"Photon_scEta", $"Photon_sthovere", $"Photon_sieie", $"Photon_pt", $"rhoArea0", $"rhoArea1", $"rhoArea2"))
+    fdf.show()
+    fdf.createOrReplaceTempView("photons")
+    val fdf1 = spark.sql("Select * FROM photons WHERE Photon_pt >= 175 and Photon_eta < 1.4442 and Photon_eta > -1.4442 and passfilter")
+    fdf1.show()
+    fdf1
+  }
+
   /*Filters for Electron DF*/
   var elecpassUDF = udf {
     (pt: Float, isConv: Short,  chHadIso: Float, gammaIso: Float, neuHadIso: Float, rhoarea: Float, scEta: Float, dEtaIn: Float, dPhiIn: Float, sieie: Float) => {

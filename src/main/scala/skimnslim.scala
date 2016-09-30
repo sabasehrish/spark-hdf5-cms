@@ -62,22 +62,37 @@ object SkimWF {
     elec_df.createOrReplaceTempView("Tdf")
     val ftdf = spark.sql("SELECT * FROM InfoDF, Tdf WHERE InfoDF.evtNum == Tdf.Electron_evtNum and InfoDF.lumiSec == Tdf.Electron_lumisec and infoDF.runNum == Tdf.Electron_runNum").drop("Electron_runNum", "Electron_evtNum", "Electron_lumisec", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
     val d = filterElectronDF(spark, ftdf)
+    
+    /*Photon DF related operations*/
+    val pho_gn = "/Photon/"
+    val pho_ds: List[String] = List("Photon.runNum", "Photon.lumisec", "Photon.evtNum", "Photon.eta", "Photon.pt", "Photon.phi", "Photon.chHadIso", "Photon.scEta", "Photon.neuHadIso", "Photon.gammaIso", "Photon.sieie", "Photon.sthovere")
+    val pho_pl = getPartitionInfo(dname, pho_gn+"Photon.eta")
+    val pho_rdd = sc.parallelize(pho_pl, pho_pl.length).flatMap(x=> readDatasets(dname+x.fname, pho_gn, pho_ds, x.begin, x.end))
+    val pho_df = createDataFrame(spark, pho_rdd, pho_gn, pho_ds)
+    pho_df.show()
+    //info_df.createOrReplaceTempView("InfoDF")
+    pho_df.createOrReplaceTempView("Tdf")
+    val p_df = spark.sql("SELECT * FROM InfoDF, Tdf WHERE InfoDF.evtNum == Tdf.Photon_evtNum and InfoDF.lumiSec == Tdf.Photon_lumisec and infoDF.runNum == Tdf.Photon_runNum").drop("Photon_runNum", "Photon_evtNum", "Photon_lumisec", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
+    filterPhotonDF(spark, p_df)  //KChHad = 0, KneuHad = 1, Kphoton = 2
+    //ftdf.show()
+
 
    /*Jet DF Operation*/
-    val jet_gn = "/AK4Puppi/"
+/*    val jet_gn = "/AK4Puppi/"
     val jet_ds: List[String] = List("AK4Puppi.runNum", "AK4Puppi.lumisec", "AK4Puppi.evtNum", "AK4Puppi.eta", "AK4Puppi.pt", "AK4Puppi.phi", "AK4Puppi.chHadFrac", "AK4Puppi.chEmFrac", "AK4Puppi.neuHadFrac", "AK4Puppi.neuEmFrac", "AK4Puppi.nParticles", "AK4Puppi.nCharged" )
     val jet_pl = getPartitionInfo(dname, jet_gn+"AK4Puppi.eta")
     val jet_rdd = sc.parallelize(jet_pl, jet_pl.length).flatMap(x=> readDatasets(dname+x.fname, jet_gn, jet_ds, x.begin, x.end))
     val jet_df = createDataFrame(spark, jet_rdd, jet_gn, jet_ds)
     jet_df.show()
     filterJetDF(spark, jet_df)
-
+*/
    /*VJet DF Operation*/
-    val vjet_gn = "/CA15Puppi/"
+ /*   val vjet_gn = "/CA15Puppi/"
     val vjet_ds: List[String] = List("CA15Puppi.runNum", "CA15Puppi.lumisec", "CA15Puppi.evtNum", "CA15Puppi.eta", "CA15Puppi.pt", "CA15Puppi.phi", "CA15Puppi.chHadFrac", "CA15Puppi.chEmFrac", "CA15Puppi.neuHadFrac", "CA15Puppi.neuEmFrac", "CA15Puppi.nParticles", "CA15Puppi.nCharged" )
     val vjet_pl = getPartitionInfo(dname, vjet_gn+"CA15Puppi.eta")
     val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(dname+x.fname, vjet_gn, vjet_ds, x.begin, x.end))
     val vjet_df = createDataFrame(spark, vjet_rdd, vjet_gn, vjet_ds)
     vjet_df.show()
+*/
   }
 }
