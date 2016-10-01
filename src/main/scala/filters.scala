@@ -20,7 +20,6 @@ object Filters {
     val fdf = muon_df.withColumn("passfilter", muonpassUDF(lit(kPOG), $"Muon_chHadIso", $"Muon_neuHadIso", $"Muon_gammaIso", $"Muon_puIso", $"Muon_pogIDBits", $"Muon_pt"))
     fdf.createOrReplaceTempView("muons")
     val fdf1 = spark.sql("SELECT * FROM muons WHERE Muon_pt >= 10 and Muon_eta > -2.4 and Muon_eta < 2.4 and passfilter")
-    fdf1.show()
     fdf1
   }
 
@@ -35,10 +34,8 @@ object Filters {
   def filterTauDF(spark: SparkSession, tau_df: DataFrame) : DataFrame = {
     import spark.implicits._
     val fdf = tau_df.withColumn("passfilter", taupassUDF($"Tau_hpsDisc", $"Tau_rawIso3Hits"))
-    fdf.show()
     fdf.createOrReplaceTempView("taus")
     val fdf1 = spark.sql("SELECT * FROM taus WHERE Tau_pt >= 10 and Tau_eta > -2.3 and Tau_eta < 2.3 and passfilter")
-    fdf1.show()
     fdf1
   }
   /*Utility function used by both photon and electron filters*/
@@ -81,10 +78,8 @@ object Filters {
     fdf = fdf.withColumn("rhoArea1", rhoeffareaPhoUDF(eta_range, eff_area_1)($"rhoIso", $"Photon_sceta"))
     fdf = fdf.withColumn("rhoArea2", rhoeffareaPhoUDF(eta_range, eff_area_2)($"rhoIso", $"Photon_sceta"))
     fdf = fdf.withColumn("passfilter", photonpassUDF($"Photon_chHadIso", $"Photon_neuHadIso", $"Photon_gammaIso", $"Photon_scEta", $"Photon_sthovere", $"Photon_sieie", $"Photon_pt", $"rhoArea0", $"rhoArea1", $"rhoArea2"))
-    fdf.show()
     fdf.createOrReplaceTempView("photons")
     val fdf1 = spark.sql("Select * FROM photons WHERE Photon_pt >= 175 and Photon_eta < 1.4442 and Photon_eta > -1.4442 and passfilter")
-    fdf1.show()
     fdf1
   }
 
@@ -134,7 +129,6 @@ object Filters {
     fdf = fdf.withColumn("passfilter2", elecpass2UDF($"Electron_scEta", $"Electron_hovere", $"Electron_eoverp", $"Electron_ecalEnergy", $"Electron_d0", $"Electron_dz", $"Electron_nMissingHits"))
     fdf.createOrReplaceTempView("Electrons")
     val fdf1 = spark.sql("SELECT * FROM Electrons WHERE Electron_pt >= 10 and Electron_eta < 2.5 and Electron_eta > -2.5 and passfilter1 and passfilter2")
-    fdf1.show()
     fdf1
   }
 
@@ -151,10 +145,8 @@ object Filters {
   def filterJetDF(spark: SparkSession, jet_df: DataFrame) : DataFrame = {
     import spark.implicits._
     val fdf = jet_df.withColumn("passfilter", jetpassUDF($"AK4Puppi_neuHadFrac", $"AK4Puppi_neuEmFrac", $"AK4Puppi_nParticles", $"AK4Puppi_eta", $"AK4Puppi_chHadFrac", $"AK4Puppi_nCharged", $"AK4Puppi_chEmFrac"))
-    fdf.show()
     fdf.createOrReplaceTempView("Jets")
     val fdf1 = spark.sql("SELECT * FROM Jets WHERE AK4Puppi_pt >=30 and AK4Puppi_eta < 4.5 and AK4Puppi_eta > -4.5 and passfilter")
-    fdf1.show()
     fdf1
   }
 }
