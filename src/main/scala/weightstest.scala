@@ -14,11 +14,11 @@ object SoWTest {
     import spark.implicits._
     val genevtinfo_df = createGenInfoDF(sc, spark, dname)
     genevtinfo_df.cache()
-    val wts = new Array[Float](10)
+    val wts = new Array[Any](10)
     //println("Num events: " + genevtinfo_df.count())
     for (i <- 1 to 10) {
     var t0 = System.nanoTime()
-    wts(i) =  genevtinfo_df.agg(sum("weight")).first.getFloat(0)
+    wts(i) =  genevtinfo_df.agg(sum("weight")).first.get(0)
     var t1 = System.nanoTime()
     println("Sum of Weights is: " + wts(i))
     println("It took :" + (t1 - t0) +" ns to calculate the weight")

@@ -2,6 +2,8 @@ import Filters._
 import H5Read._
 import H5DataFrame._
 import SkimWF._
+import SoWTest._
+import EventcountTest._
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Row
@@ -18,7 +20,9 @@ object runmain {
       println("Missing input directory name")
     } else {
       val dname = args(0)
-      skimworkflow(sc, spark, dname)
+      //skimworkflow(sc, spark, dname)
+      //runSoWtest(sc, spark, dname)
+      runevtcounttest(sc, spark, dname)
     }
   }
 }
