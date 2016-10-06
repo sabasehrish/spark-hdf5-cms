@@ -16,60 +16,55 @@ object SkimWF {
     // into Spark DataFrames
     // Apply filters on each DF and get the resulting DF 
 
-    /*Final muon_df after all operations operations*/
-    /*var t0 = System.nanoTime()
-    val muon_df = createMuonDF(sc, spark, dname)
-    muon_df.write.format("com.databricks.spark.csv").option("header","true").save("muons.csv")
-    var t1 = System.nanoTime()
-    println("It took :" + (t1 - t0) +" ns to create and save Muon DF")    
-   
-    t0 = System.nanoTime()
+    var t0 = System.nanoTime()
     val info_df = createInfoDF(sc, spark, dname)
     info_df.cache()
-    info_df.write.format("com.databricks.spark.csv").option("header","true").save("info.csv")
+    info_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/info2.csv")
+    var t1 = System.nanoTime()
+    println("It took :" + (t1 - t0) +" ns to create and save Info DF")   
+
+    t0 = System.nanoTime()
+    val addjet_df = createVAddJetDF(sc, spark, dname)
+    val vjet_df = createVJetDF(sc, spark, dname, addjet_df)
+    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/vjet2.csv")
     t1 = System.nanoTime()
-    println("It took :" + (t1 - t0) +" ns to create and save Info DF")    
+    println("It took :" + (t1 - t0) +" ns to create and save VJet DF")
+    
+    t0 = System.nanoTime()
+    val jet_df = createJetDF(sc, spark, dname, info_df, vjet_df)
+    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/jet2.csv")
+    t1 = System.nanoTime()
+    println("It took :" + (t1 - t0) +" ns to create and save Jet DF")
+  
+    t0 = System.nanoTime()
+    val muon_df = createMuonDF(sc, spark, dname)
+    muon_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/muons2.csv")
+    t1 = System.nanoTime()
+    println("It took :" + (t1 - t0) +" ns to create and save Muon DF") 
 
     t0 = System.nanoTime()
     val elec_df = createElectronDF(sc, spark, dname, info_df)
-    elec_df.write.format("com.databricks.spark.csv").option("header","true").save("electrons.csv")
+    elec_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/electrons2.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Electron DF")
 
     t0 = System.nanoTime()
     val pho_df = createPhotonDF(sc, spark, dname, info_df)
-    pho_df.write.format("com.databricks.spark.csv").option("header","true").save("pho.csv")
+    pho_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/pho2.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Photon DF")
     
-    val info_df = createInfoDF(sc, spark, dname)
-    info_df.cache()
-    var t0 = System.nanoTime()
+    t0 = System.nanoTime()
     val tau_df = createTauDF(sc, spark, dname)
-    tau_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/tau.csv")
-    var t1 = System.nanoTime()
+    tau_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/tau2.csv")
+    t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Tau DF")
 
     t0 = System.nanoTime()
     val genevtinfo_df = createGenInfoDF(sc, spark, dname)
-    genevtinfo_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/geninfo.csv")
+    genevtinfo_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/geninfo2.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Gen Info DF")
-    */
-    var t0 = System.nanoTime()
-    val info_df = createInfoDF(sc, spark, dname)
-    //val jet_df = createJetDF(sc, spark, dname, info_df, vjet)
-    val addjet_df = createVAddJetDF(sc, spark, dname)
-    val vjet_df = createVJetDF(sc, spark, dname, addjet_df)
-    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/vjet1.csv")
-    var t1 = System.nanoTime()
-    println("It took :" + (t1 - t0) +" ns to create and save VJet DF")
-    
-    t0 = System.nanoTime()
-    val jet_df = createJetDF(sc, spark, dname, info_df, vjet_df)
-    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/jet1.csv")
-    t1 = System.nanoTime()
-    println("It took :" + (t1 - t0) +" ns to create and save Jet DF")
   }
 
   def createMuonDF(sc: SparkContext, spark: SparkSession, dname: String) : DataFrame = {
@@ -82,7 +77,7 @@ object SkimWF {
     val muon_df = createDataFrame(spark, muon_rdd, muon_gn, muon_ds)
     val fdf = filterMuonDF(spark, 1, muon_df)
     fdf.cache()
-    val newNames = Seq("lumiSec", "runNum", "pt")
+    val newNames = Seq("lumiSec", "runNum", "evtNum", "pt")
     val mdf = fdf.groupBy("Muon_lumisec", "Muon_runNum", "Muon_evtNum").max("Muon_pt").toDF(newNames: _*)
     fdf.createOrReplaceTempView("filteredMuons")
     mdf.createOrReplaceTempView("mdf")

@@ -104,7 +104,7 @@ val memspace_id = H5.H5Screate_simple(1, count, null)
       }
      case "/Electron/" => {
                       for (i <- 0 to (arr(0).length -1)) {
-                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i), arr(12).getFloat(i), arr(13).getFloat(i), arr(14).getFloat(i), arr(15).getFloat(i), arr(16).getFloat(i), arr(17).getFloat(i), arr(18).getInt(i), arr(19).getShort(i))
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i), arr(12).getFloat(i), arr(13).getFloat(i), arr(14).getFloat(i), arr(15).getFloat(i), arr(16).getFloat(i), arr(17).getFloat(i), arr(18).getInt(i), arr(19).getByte(i))
                       }
       }
      case "/AK4Puppi/" => {
