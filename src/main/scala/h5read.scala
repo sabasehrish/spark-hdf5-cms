@@ -97,30 +97,35 @@ val memspace_id = H5.H5Screate_simple(1, count, null)
                         tarr(i) = Row(arr(0).getFloat(i), arr(1).getFloat(i), arr(2).getFloat(i), arr(3).getInt(i), arr(4).getInt(i), arr(5).getInt(i),arr(6).getLong(i), arr(7).getFloat(i))
                       }
       }
-      case "/Photon/" => {
+     case "/Photon/" => {
                       for (i <- 0 to (arr(0).length -1)) {
                         tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i))
                       }
       }
      case "/Electron/" => {
                       for (i <- 0 to (arr(0).length -1)) {
-                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i), arr(12).getFloat(i), arr(13).getFloat(i), arr(14).getFloat(i), arr(15).getFloat(i), arr(16).getFloat(i), arr(17).getFloat(i), arr(18).getInt(i), arr(19).getByte(i))
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i), arr(12).getFloat(i), arr(13).getFloat(i), arr(14).getFloat(i), arr(15).getFloat(i), arr(16).getFloat(i), arr(17).getFloat(i), arr(18).getInt(i), arr(19).getShort(i))
                       }
       }
      case "/AK4Puppi/" => {
                       for (i <- 0 to (arr(0).length -1)) {
-                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getInt(i), arr(11).getInt(i))
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i), arr(12).getInt(i), arr(13).getInt(i))
                       }
       }
      case "/CA15Puppi/" => {
                       for (i <- 0 to (arr(0).length -1)) {
-                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getInt(i), arr(11).getInt(i))
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i), arr(11).getFloat(i), arr(12).getInt(i), arr(13).getInt(i))
                       }
       }
-
-      case "/Info/"  => {
+     case "/AddCA15Puppi/" => {
+                     for (i <- 0 to (arr(0).length -1)) {
+                        tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i), arr(5).getFloat(i),arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i), arr(9).getFloat(i), arr(10).getFloat(i))
+                      }
+      }
+     case "/Info/"  => {
                       for (i <- 0 to (arr(0).length -1)) {
                         tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getInt(i), arr(5).getFloat(i), arr(6).getFloat(i), arr(7).getFloat(i), arr(8).getFloat(i))
+
                       }
       }
       case "/GenEvtInfo/"  => {
@@ -128,10 +133,10 @@ val memspace_id = H5.H5Screate_simple(1, count, null)
                         tarr(i) = Row(arr(0).getInt(i), arr(1).getInt(i), arr(2).getInt(i), arr(3).getFloat(i), arr(4).getFloat(i))
                       }
       }
-
       }
     return tarr
   }
+
 def readDatasets(fname: String, gname: String, dslist: List[String], begin: Long, end: Long): Array[Row] = {
     val file_id = H5.H5Fopen(fname, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT)
     val arrayBuf = ArrayBuffer[Row]()

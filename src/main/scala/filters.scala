@@ -142,6 +142,7 @@ object Filters {
         ((eta < 2.4 && eta > -2.4) && (chHadFrac == 0 || nCharged == 0 || chEmFrac >= 0.99))
     }
   }
+
   def filterJetDF(spark: SparkSession, jet_df: DataFrame) : DataFrame = {
     import spark.implicits._
     val fdf = jet_df.withColumn("passfilter", jetpassUDF($"AK4Puppi_neuHadFrac", $"AK4Puppi_neuEmFrac", $"AK4Puppi_nParticles", $"AK4Puppi_eta", $"AK4Puppi_chHadFrac", $"AK4Puppi_nCharged", $"AK4Puppi_chEmFrac"))
@@ -149,4 +150,24 @@ object Filters {
     val fdf1 = spark.sql("SELECT * FROM Jets WHERE AK4Puppi_pt >=30 and AK4Puppi_eta < 4.5 and AK4Puppi_eta > -4.5 and passfilter")
     fdf1
   }
+
+  def filterVJetDF(spark: SparkSession, vjet_df: DataFrame) : DataFrame = {
+    import spark.implicits._
+    val fdf = vjet_df.withColumn("passfilter", jetpassUDF($"CA15Puppi_neuHadFrac", $"CA15Puppi_neuEmFrac", $"CA15Puppi_nParticles", $"CA15Puppi_eta", $"CA15Puppi_chHadFrac", $"CA15Puppi_nCharged", $"CA15Puppi_chEmFrac"))
+    fdf.show()
+    fdf.createOrReplaceTempView("VJets")
+    val fdf1 = spark.sql("SELECT * FROM VJets WHERE CA15Puppi_pt >=150 and CA15Puppi_eta < 2.5 and CA15Puppi_eta > -2.5 and passfilter")
+    fdf1.show()
+    fdf1
+  }
+  /* dR filter or deltaR filter*/
+  def DeltaRUDF = udf {(eta1: Float, phi1: Float, eta2: Float, phi2: Float) => {
+    val diffeta = eta1 - eta2
+    val diffphi = phi1 - phi2
+    val dphi_adjusted = if (diffphi >= Math.PI) diffphi - Math.PI
+                        else if (diffphi < -Math.PI) diffphi + Math.PI
+                        else diffphi
+    Math.sqrt(diffeta*diffeta + dphi_adjusted*dphi_adjusted)
+  }}
+
 }

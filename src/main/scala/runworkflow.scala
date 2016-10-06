@@ -20,9 +20,9 @@ object runmain {
       println("Missing input directory name")
     } else {
       val dname = args(0)
-      //skimworkflow(sc, spark, dname)
+      skimworkflow(sc, spark, dname)
       //runSoWtest(sc, spark, dname)
-      runevtcounttest(sc, spark, dname)
+      //runevtcounttest(sc, spark, dname)
     }
   }
 }
