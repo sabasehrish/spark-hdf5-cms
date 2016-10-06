@@ -63,6 +63,12 @@ object SkimWF {
     val vjet_df = createVJetDF(sc, spark, dname, addjet_df)
     vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/vjet1.csv")
     var t1 = System.nanoTime()
+    println("It took :" + (t1 - t0) +" ns to create and save VJet DF")
+    
+    t0 = System.nanoTime()
+    val jet_df = createJetDF(sc, spark, dname, info_df, vjet_df)
+    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/jet1.csv")
+    t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Jet DF")
   }
 
@@ -77,10 +83,10 @@ object SkimWF {
     val fdf = filterMuonDF(spark, 1, muon_df)
     fdf.cache()
     val newNames = Seq("lumiSec", "runNum", "pt")
-    val mdf = fdf.groupBy("Muon_lumisec", "Muon_runNum").max("Muon_pt").toDF(newNames: _*)
+    val mdf = fdf.groupBy("Muon_lumisec", "Muon_runNum", "Muon_evtNum").max("Muon_pt").toDF(newNames: _*)
     fdf.createOrReplaceTempView("filteredMuons")
     mdf.createOrReplaceTempView("mdf")
-    val mdf1 = spark.sql("SELECT * FROM filteredMuons, mdf WHERE filteredMuons.Muon_runNum == mdf.runNum and filteredMuons.Muon_lumiSec == mdf.lumiSec and filteredMuons.Muon_pt == mdf.pt").drop("pt", "runNum", "lumiSec")
+    val mdf1 = spark.sql("SELECT * FROM filteredMuons, mdf WHERE filteredMuons.Muon_runNum == mdf.runNum and filteredMuons.Muon_lumiSec == mdf.lumiSec and filteredMuons.Muon_evtNum == mdf.evtNum and filteredMuons.Muon_pt == mdf.pt").drop("pt", "runNum", "lumiSec", "evtNum", "Muon_chHadIso", "Muon_neuHadIso", "Muon_puIso", "Muon_pogIDBits", "Muon_gammaIso")
     mdf1.withColumn("Muon_Mass", lit(muonMass))
   }
 
@@ -94,10 +100,10 @@ object SkimWF {
     val tau_fdf = filterTauDF(spark, tau_df)
     tau_fdf.cache()
     val newNames = Seq("lumiSec", "runNum", "pt")
-    val tdf = tau_fdf.groupBy("Tau_lumisec", "Tau_runNum").max("Tau_pt").toDF(newNames: _*)
+    val tdf = tau_fdf.groupBy("Tau_lumisec", "Tau_runNum", "Tau_evtNum").max("Tau_pt").toDF(newNames: _*)
     tau_df.createOrReplaceTempView("TauDF")
     tdf.createOrReplaceTempView("Tdf")
-    val ftdf = spark.sql("SELECT * FROM TauDF, Tdf WHERE TauDF.Tau_lumisec == Tdf.lumiSec and TauDF.Tau_runNum == Tdf.runNum and TauDF.Tau_pt == Tdf.pt") .drop("pt", "runNum", "lumiSec")
+    val ftdf = spark.sql("SELECT * FROM TauDF, Tdf WHERE TauDF.Tau_lumisec == Tdf.lumiSec and TauDF.Tau_runNum == Tdf.runNum and TauDF.Tau_evtNum == Tdf.evtNum and TauDF.Tau_pt == Tdf.pt") .drop("pt", "runNum", "lumiSec", "evtNum", "Tau_hpsDisc", "Tau_rawIso3Hits")
     ftdf
   }
 
@@ -124,11 +130,11 @@ object SkimWF {
     val ftdf = spark.sql("SELECT * FROM InfoDF, Tdf WHERE InfoDF.evtNum == Tdf.Electron_evtNum and InfoDF.lumiSec == Tdf.Electron_lumisec and infoDF.runNum == Tdf.Electron_runNum").drop("runNum", "evtNum", "lumiSec", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
     val fdf = filterElectronDF(spark, ftdf).drop("rhoEffarea", "passfilter1", "passfilter2", "rhoIso")
     fdf.cache()
-    val newNames = Seq("lumiSec", "runNum", "pt")
-    val mdf = fdf.groupBy("ELectron_lumisec", "Electron_runNum").max("Electron_pt").toDF(newNames: _*)
+    val newNames = Seq("runNum", "lumiSec", "evtNum" ,"pt")
+    val mdf = fdf.groupBy("ELectron_runNum", "Electron_lumisec", "Electron_evtNum").max("Electron_pt").toDF(newNames: _*)
     fdf.createOrReplaceTempView("filteredElectrons")
     mdf.createOrReplaceTempView("mdf")
-    val mdf1 = spark.sql("SELECT * FROM filteredElectrons, mdf WHERE filteredElectrons.Electron_runNum == mdf.runNum and filteredElectrons.Electron_lumiSec == mdf.lumiSec and filteredElectrons.Electron_pt == mdf.pt").drop("pt", "runNum", "lumiSec")
+    val mdf1 = spark.sql("SELECT * FROM filteredElectrons, mdf WHERE filteredElectrons.Electron_runNum == mdf.runNum and filteredElectrons.Electron_lumiSec == mdf.lumiSec and filteredElectrons.Electron_pt == mdf.pt").drop("pt", "runNum", "lumiSec", "evtNum", "Electron_chHadIso", "Electron_neuHadIso", "Electron_gammaIso", "Electron_scEta", "Electron_sieie", "Electron_hovere", "Electron_eoverp", "Electron_dEtaIn", "Electron_dPhiIn", "Electron_ecalEnergy", "Electron_d0", "Electron_dz", "Electron_nMissingHits", "Electron_isConv")
     mdf1.withColumn("Electron_Mass", lit(electronMass))
   }
 
@@ -142,14 +148,14 @@ object SkimWF {
     info_df.createOrReplaceTempView("InfoDF")
     pho_df.createOrReplaceTempView("Tdf")
     val ftdf = spark.sql("SELECT * FROM InfoDF, Tdf WHERE InfoDF.evtNum == Tdf.Photon_evtNum and InfoDF.lumiSec == Tdf.Photon_lumisec and infoDF.runNum == Tdf.Photon_runNum").drop("Photon_runNum", "Photon_evtNum", "Photon_lumisec", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
-    val max_tdf = filterPhotonDF(spark, ftdf).groupBy("runNum", "lumiSec").max("Photon_pt").withColumnRenamed("max(Photon_pt)", "Photon_pt")
-    val count_tdf = filterPhotonDF(spark, ftdf).groupBy("runNum", "lumiSec").count()
+    val max_tdf = filterPhotonDF(spark, ftdf).groupBy("runNum", "lumiSec", "evtNum").max("Photon_pt").withColumnRenamed("max(Photon_pt)", "Photon_pt")
+    val count_tdf = filterPhotonDF(spark, ftdf).groupBy("runNum", "lumiSec", "evtNum").count()
     max_tdf.createOrReplaceTempView("maxpt")
     count_tdf.createOrReplaceTempView("count")
-    val tdf = spark.sql("SELECT maxpt.runNum as tmp_runNum, maxpt.lumiSec as tmp_lumiSec, maxpt.Photon_pt as pt, count.count from maxpt, count WHERE maxpt.runNum == count.runNum and maxpt.lumiSec == count.lumiSec")
+    val tdf = spark.sql("SELECT maxpt.runNum as tmp_runNum, maxpt.lumiSec as tmp_lumiSec, maxpt.evtNum as tmp_evtNum, maxpt.Photon_pt as pt, count.count from maxpt, count WHERE maxpt.runNum == count.runNum and maxpt.lumiSec == count.lumiSec and maxpt.evtNum == count.evtNum")
     ftdf.createOrReplaceTempView("filteredPhotons")
     tdf.createOrReplaceTempView("countmax")
-    val tdf1 = spark.sql("SELECT * FROM filteredPhotons, countmax WHERE filteredPhotons.runNum == countmax.tmp_runNum and filteredPhotons.lumiSec == countmax.tmp_lumiSec and filteredPhotons.Photon_pt == countmax.pt").drop("tmp_lumiSec", "tmp_runNum", "pt")
+    val tdf1 = spark.sql("SELECT * FROM filteredPhotons, countmax WHERE filteredPhotons.runNum == countmax.tmp_runNum and filteredPhotons.lumiSec == countmax.tmp_lumiSec and filteredPhotons.Photon_pt == countmax.pt").drop("tmp_lumiSec", "tmp_runNum", "pt", "tmp_evtNum", "Photon_chHadIso", "Photon_scEta", "Photon_neuHadIso", "Photon_gammaIso", "Photon_sieie", "Photon_sthovere")
     tdf1
   }
 
@@ -174,14 +180,14 @@ object SkimWF {
     jet_df.createOrReplaceTempView("Tdf")
     val jet_df1 = spark.sql("SELECT * FROM InfoDF, Tdf WHERE InfoDF.evtNum == Tdf.AK4Puppi_evtNum and InfoDF.lumiSec == Tdf.AK4Puppi_lumisec and infoDF.runNum == Tdf.AK4Puppi_runNum").drop("runNum", "evtNum", "lumiSec", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "rhoIso")
     val fJetDF = filterJetDF(spark, jet_df1).drop("passfilter", "AK4Puppi_nParticles", "AK4Puppi_nCharged", "AK4Puppi_chEMFrac")
-    val max_tdf = fJetDF.groupBy("AK4Puppi_runNum", "AK4Puppi_lumiSec").max("AK4Puppi_pt").withColumnRenamed("max(AK4Puppi_pt)", "pt")
-    val count_tdf = fJetDF.groupBy("AK4Puppi_runNum", "AK4Puppi_lumiSec").count()
+    val max_tdf = fJetDF.groupBy("AK4Puppi_runNum", "AK4Puppi_lumiSec", "AK4Puppi_evtNum").max("AK4Puppi_pt").withColumnRenamed("max(AK4Puppi_pt)", "pt")
+    val count_tdf = fJetDF.groupBy("AK4Puppi_runNum", "AK4Puppi_lumiSec", "AK4Puppi_evtNum").count()
     max_tdf.createOrReplaceTempView("maxpt")
     count_tdf.createOrReplaceTempView("count")
-    var tdf = spark.sql("SELECT maxpt.AK4Puppi_runNum as tmp_runNum, maxpt.AK4Puppi_lumiSec as tmp_lumiSec, maxpt.pt, count.count as N from maxpt, count WHERE maxpt.AK4Puppi_runNum == count.AK4Puppi_runNum and maxpt.AK4Puppi_lumiSec == count.AK4Puppi_lumiSec")
+    var tdf = spark.sql("SELECT maxpt.AK4Puppi_runNum as tmp_runNum, maxpt.AK4Puppi_lumiSec as tmp_lumiSec, maxpt.AK4Puppi_evtNum as tmp_evtNum, maxpt.pt, count.count as N from maxpt, count WHERE maxpt.AK4Puppi_runNum == count.AK4Puppi_runNum and maxpt.AK4Puppi_lumiSec == count.AK4Puppi_lumiSec and maxpt.AK4Puppi_evtNum == count.AK4Puppi_evtNum")
     fJetDF.createOrReplaceTempView("filteredJets")
     tdf.createOrReplaceTempView("countmax")
-    var tdf1 = spark.sql("SELECT * FROM filteredJets, countmax WHERE filteredJets.AK4Puppi_runNum == countmax.tmp_runNum and filteredJets.AK4Puppi_lumiSec == countmax.tmp_lumiSec and filteredJets.AK4Puppi_pt == countmax.pt").drop("tmp_lumiSec", "tmp_runNum", "pt")
+    var tdf1 = spark.sql("SELECT * FROM filteredJets, countmax WHERE filteredJets.AK4Puppi_runNum == countmax.tmp_runNum and filteredJets.AK4Puppi_lumiSec == countmax.tmp_lumiSec and filteredJets.AK4Puppi_pt == countmax.pt and filteredJets.AK4Puppi_evtNum == countmax.tmp_evtNum").drop("tmp_lumiSec", "tmp_runNum", "pt")
     tdf1 = tdf1.withColumn("mindPhi", pdPhiUDF(999.99f)($"puppETphi", $"AK4Puppi_phi"))
     tdf1 = tdf1.withColumn("mindFPhi", pdFPhiUDF(999.99f)($"puppETphi", $"AK4Puppi_phi"))
     tdf1.createOrReplaceTempView("filteredJ")
