@@ -154,10 +154,8 @@ object Filters {
   def filterVJetDF(spark: SparkSession, vjet_df: DataFrame) : DataFrame = {
     import spark.implicits._
     val fdf = vjet_df.withColumn("passfilter", jetpassUDF($"CA15Puppi_neuHadFrac", $"CA15Puppi_neuEmFrac", $"CA15Puppi_nParticles", $"CA15Puppi_eta", $"CA15Puppi_chHadFrac", $"CA15Puppi_nCharged", $"CA15Puppi_chEmFrac"))
-    fdf.show()
     fdf.createOrReplaceTempView("VJets")
     val fdf1 = spark.sql("SELECT * FROM VJets WHERE CA15Puppi_pt >=150 and CA15Puppi_eta < 2.5 and CA15Puppi_eta > -2.5 and passfilter")
-    fdf1.show()
     fdf1
   }
   /* dR filter or deltaR filter*/

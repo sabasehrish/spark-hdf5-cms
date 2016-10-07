@@ -16,7 +16,7 @@ object SoWTest {
     genevtinfo_df.cache()
     val wts = new Array[Any](10)
     //println("Num events: " + genevtinfo_df.count())
-    for (i <- 1 to 10) {
+    for (i <- 0 to 9) {
     var t0 = System.nanoTime()
     wts(i) =  genevtinfo_df.agg(sum("weight")).first.get(0)
     var t1 = System.nanoTime()

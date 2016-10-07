@@ -15,7 +15,7 @@ object EventcountTest {
     val genevtinfo_df = createGenInfoDF(sc, spark, dname)
     genevtinfo_df.persist()
     val counts = new Array[Long](10)
-    for (i <- 1 to 10) {
+    for (i <- 0 to 10) {
     var t0 = System.nanoTime()
     counts(i) =  genevtinfo_df.count() 
     var t1 = System.nanoTime()
