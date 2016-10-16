@@ -28,15 +28,36 @@ def copy_format(f_in, f_out):
 			dset = grp.create_dataset(d, shape=(0,), 
 						  dtype=src.dtype,maxshape=(None,))
 			print name, dset.size, dset.shape
-			
-if __name__ == "__main__":
 
-	if len(sys.argv)<2:
-		print "bad args.  ", sys.argv[0], "dir_where_files_are"
-		sys.exit(-1)
-		
+def make_prototype(in_dir, out_dir):
+    flist = glob.glob(in_dir + "/*")
+    if len(flist)==0:
+        print "no files in ",in_dir
+        sys.exit(-1)
+
+    fname_in=flist[0]
+    fname_out=out_dir + "/all_"+os.path.basename(in_dir)
+    
 	f_in = h5py.File(fname_in,'r')
 	f_out = h5py.File(fname_out,'a')
+    
 	copy_format(f_in, f_out)
+    
 	f_in.close()
 	f_out.close()
+
+    return fname_out
+    
+
+if __name__ == "__main__":
+
+	if len(sys.argv)<3:
+		print "bad args.  ", sys.argv[0], "dir_where_files_are out_dir"
+		sys.exit(-1)
+
+    in_dir = sys.argv[1]
+    out_dir = sys.argv[2]
+
+    outfile = make_prototype(in_dir, out_dir)
+    print "copied format to file",outfile
+    
