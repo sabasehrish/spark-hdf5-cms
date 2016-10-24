@@ -33,18 +33,25 @@ def read_one(var,gk,dk):
         e_time = MPI.Wtime()
         print gk, dk, totals, (e_time - s_time)
 
+# a few examples
+# m_eta = f['/Muon/Muon.eta']
+# m_pt = f['/Muon/Muon.pt']
+# t_eta = f['/Tau/Tau.eta']
+# t_pt = f['/Tau/Tau.pt']
 
-with h5py.File(filename, 'r', driver='mpio', comm=MPI.COMM_WORLD) as f:
-    m_eta = f['/Muon/Muon.eta']
-    m_pt = f['/Muon/Muon.pt']
-    t_eta = f['/Tau/Tau.eta']
-    t_pt = f['/Tau/Tau.pt']
+def sum_of_all():
+    with h5py.File(filename, 'r', driver='mpio', comm=MPI.COMM_WORLD) as f:
+        for gk in f.keys():
+            g = f['/'+gk]
+            for dk in g.keys():
+                d = g[dk]
+                # print gk, dk, read_one(d)
+                read_one(d,gk,dk)
 
-    for gk in f.keys():
-        g = f['/'+gk]
-        for dk in g.keys():
-            d = g[dk]
-            # print gk, dk, read_one(d)
-            read_one(d,gk,dk)
+def simple_filter():
+    with h5py.File(filename, 'r', driver='mpio', comm=MPI.COMM_WORLD) as f:
+        # fdf = filterMuonDF(spark, 1, muon_df)
 
+        res = pt>=10 && eta>-2.4 && eta<2.4 && ((kPOGIDBits & kPOG) && ((chHadIso+np.maximum(neuHadIso+gammaIso - .5*puIso,0)) < .12 * pt))
 
+        
