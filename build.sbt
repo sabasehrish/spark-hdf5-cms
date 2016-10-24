@@ -14,5 +14,6 @@ resolvers ++= Seq(
         "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots/",
         "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases/"
 )
-sparkComponents ++= Seq("core", "sql", "mllib")
+sparkComponents ++= Seq("core", "sql", "mllib", "hive")
+//libraryDependencies += "org.apache.spark" %% "spark-hive" % "1.5.0"
 
