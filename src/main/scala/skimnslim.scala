@@ -6,8 +6,11 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.rdd._
-import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.functions.{udf, callUDF, lit, col}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.hive.HiveContext
+import org.apache.hadoop.hive.ql.exec.UDF
+import org.apache.spark.sql.types._
 
 object SkimWF {
   def skimworkflow(sc: SparkContext, spark: SparkSession, dname: String) {
@@ -15,56 +18,76 @@ object SkimWF {
     // read all HDF5 groups and data sets that are needed for this analysis 
     // into Spark DataFrames
     // Apply filters on each DF and get the resulting DF 
-
-    var t0 = System.nanoTime()
+/*   var t0 = System.nanoTime()
     val info_df = createInfoDF(sc, spark, dname)
-    info_df.cache()
-    info_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/info2.csv")
     var t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Info DF")   
-
-    t0 = System.nanoTime()
+*/    
     val addjet_df = createVAddJetDF(sc, spark, dname)
     val vjet_df = createVJetDF(sc, spark, dname, addjet_df)
-    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/vjet2.csv")
-    t1 = System.nanoTime()
-    println("It took :" + (t1 - t0) +" ns to create and save VJet DF")
-    
+    vjet_df.persist()
+    //vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/vjet7.csv")
+    var t0 = System.nanoTime()
+    //create a histogram here 
+    var hists = vjet_df.select("CA15Puppi_pt").rdd.map(_.getFloat(0).toDouble).histogram(Array(194.5977020263672, 300.0, 450.00, 757.8032173156738, 1001.0, 1321.0087326049804, 1884.2142478942872))
+      var t1 = System.nanoTime()
+      println("It took :" + (t1 - t0) +" ns to histogram pt VJet DF")
+      hists.foreach(x=>println(x))
+
+     t0 = System.nanoTime()
+     val hists1 = vjet_df.select("CA15Puppi_eta").rdd.map(_.getFloat(0).toDouble).histogram(10) //Array(194.5977020263672, 300.0, 450.00, 757.8032173156738, 1001.0, 1321.0087326049804, 1884.2142478942872))
+     t1 = System.nanoTime()
+     println("It took :" + (t1 - t0) +" ns to histogram eta VJet DF")
+     hists1._1.foreach(x=>println(x))
+     hists1._2.foreach(x=>println(x))
+/*
     t0 = System.nanoTime()
     val jet_df = createJetDF(sc, spark, dname, info_df, vjet_df)
-    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/jet2.csv")
+    vjet_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/jet5.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Jet DF")
   
     t0 = System.nanoTime()
     val muon_df = createMuonDF(sc, spark, dname)
-    muon_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/muons2.csv")
+    muon_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/muons5.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Muon DF") 
 
-    t0 = System.nanoTime()
     val elec_df = createElectronDF(sc, spark, dname, info_df)
-    elec_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/electrons2.csv")
+  //  elec_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/electrons5.csv")
+    //println(elec_df.count())
+    elec_df.persist()
+    t0 = System.nanoTime()
+    var hists1 = elec_df.select("Electron_pt").rdd.map(_.getFloat(0).toDouble).histogram(10)
     t1 = System.nanoTime()
-    println("It took :" + (t1 - t0) +" ns to create and save Electron DF")
+    println("It took :" + (t1 - t0) +" ns to create Electron DF and histogram pt")
+    hists1._1.foreach(x=>println(x))
+    hists1._2.foreach(x=>println(x))
+
+    hists1 = elec_df.select("Electron_eta").rdd.map(_.getFloat(0).toDouble).histogram(10)
+    t1 = System.nanoTime()
+    println("It took :" + (t1 - t0) +" ns to create Electron DF and histogram eta")
+    hists1._1.foreach(x=>println(x))
+    hists1._2.foreach(x=>println(x))
 
     t0 = System.nanoTime()
     val pho_df = createPhotonDF(sc, spark, dname, info_df)
-    pho_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/pho2.csv")
+    pho_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/pho5.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Photon DF")
     
     t0 = System.nanoTime()
     val tau_df = createTauDF(sc, spark, dname)
-    tau_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/tau2.csv")
+    tau_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/tau5.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Tau DF")
 
     t0 = System.nanoTime()
     val genevtinfo_df = createGenInfoDF(sc, spark, dname)
-    genevtinfo_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/geninfo2.csv")
+    genevtinfo_df.write.format("com.databricks.spark.csv").option("header","true").save("/global/cscratch1/sd/ssehrish/geninfo5.csv")
     t1 = System.nanoTime()
     println("It took :" + (t1 - t0) +" ns to create and save Gen Info DF")
+    */
   }
 
   def createMuonDF(sc: SparkContext, spark: SparkSession, dname: String) : DataFrame = {
@@ -73,7 +96,7 @@ object SkimWF {
     val muon_gn = "/Muon/"
     val muon_ds: List[String] = List("Muon.eta", "Muon.pt", "Muon.phi", "Muon.evtNum", "Muon.runNum", "Muon.lumisec", "Muon.chHadIso", "Muon.neuHadIso", "Muon.puIso", "Muon.pogIDBits", "Muon.gammaIso")
     val partitionlist = getPartitionInfo(dname, muon_gn+"Muon.eta")
-    val muon_rdd = sc.parallelize(partitionlist, partitionlist.length).flatMap(x=> readDatasets(dname+x.fname, muon_gn, muon_ds, x.begin, x.end))
+    val muon_rdd = sc.parallelize(partitionlist, partitionlist.length).flatMap(x=> readDatasets(x.dname+x.fname, muon_gn, muon_ds, x.begin, x.end))
     val muon_df = createDataFrame(spark, muon_rdd, muon_gn, muon_ds)
     val fdf = filterMuonDF(spark, 1, muon_df)
     fdf.cache()
@@ -90,7 +113,7 @@ object SkimWF {
     val tau_gn = "/Tau/"
     val tau_ds: List[String] = List("Tau.eta", "Tau.pt", "Tau.phi", "Tau.evtNum", "Tau.runNum", "Tau.lumisec", "Tau.hpsDisc", "Tau.rawIso3Hits")
     val tau_pl = getPartitionInfo(dname, tau_gn+"Tau.eta")
-    val tau_rdd = sc.parallelize(tau_pl, tau_pl.length).flatMap(x=> readDatasets(dname+x.fname, tau_gn, tau_ds, x.begin, x.end))
+    val tau_rdd = sc.parallelize(tau_pl, tau_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, tau_gn, tau_ds, x.begin, x.end))
     val tau_df = createDataFrame(spark, tau_rdd, tau_gn, tau_ds)
     val tau_fdf = filterTauDF(spark, tau_df)
     tau_fdf.cache()
@@ -106,11 +129,11 @@ object SkimWF {
     val info_gn = "/Info/"
     val info_ds: List[String] = List("runNum", "lumiSec", "evtNum", "rhoIso", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
     val info_pl = getPartitionInfo(dname, info_gn+"evtNum")
-    val info_rdd = sc.parallelize(info_pl, info_pl.length).flatMap(x=> readDatasets(dname+x.fname, info_gn, info_ds, x.begin, x.end))
+    val info_rdd = sc.parallelize(info_pl, info_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, info_gn, info_ds, x.begin, x.end))
     val info_df = createDataFrame(spark, info_rdd, info_gn, info_ds)
     info_df.createOrReplaceTempView("infot")
     val fdf = spark.sql("SELECT * FROM infot WHERE pfMET > 200 or puppET > 200")
-    fdf
+    info_df
   }
 
   def createElectronDF(sc: SparkContext, spark: SparkSession, dname: String, info_df: DataFrame) : DataFrame = {
@@ -118,11 +141,13 @@ object SkimWF {
     val elec_gn = "/Electron/"
     val elec_ds: List[String] = List("Electron.runNum", "Electron.lumisec", "Electron.evtNum", "Electron.eta", "Electron.pt", "Electron.phi", "Electron.chHadIso", "Electron.neuHadIso", "Electron.gammaIso", "Electron.scEta", "Electron.sieie", "Electron.hovere", "Electron.eoverp", "Electron.dEtaIn", "Electron.dPhiIn", "Electron.ecalEnergy", "Electron.d0", "Electron.dz", "Electron.nMissingHits", "Electron.isConv")
     val elec_pl = getPartitionInfo(dname, elec_gn+"Electron.eta")
-    val elec_rdd = sc.parallelize(elec_pl, elec_pl.length).flatMap(x=> readDatasets(dname+x.fname, elec_gn, elec_ds, x.begin, x.end))
+    val elec_rdd = sc.parallelize(elec_pl, elec_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, elec_gn, elec_ds, x.begin, x.end))
     val elec_df = createDataFrame(spark, elec_rdd, elec_gn, elec_ds)
+   // println("Before join: "+ elec_df.count())
     info_df.createOrReplaceTempView("InfoDF")
     elec_df.createOrReplaceTempView("Tdf")
     val ftdf = spark.sql("SELECT * FROM InfoDF, Tdf WHERE InfoDF.evtNum == Tdf.Electron_evtNum and InfoDF.lumiSec == Tdf.Electron_lumisec and infoDF.runNum == Tdf.Electron_runNum").drop("runNum", "evtNum", "lumiSec", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
+    //println("after join: "+ ftdf.count())
     val fdf = filterElectronDF(spark, ftdf).drop("rhoEffarea", "passfilter1", "passfilter2", "rhoIso")
     fdf.cache()
     val newNames = Seq("runNum", "lumiSec", "evtNum" ,"pt")
@@ -138,7 +163,7 @@ object SkimWF {
     val pho_gn = "/Photon/"
     val pho_ds: List[String] = List("Photon.runNum", "Photon.lumisec", "Photon.evtNum", "Photon.eta", "Photon.pt", "Photon.phi", "Photon.chHadIso", "Photon.scEta", "Photon.neuHadIso", "Photon.gammaIso", "Photon.sieie", "Photon.sthovere")
     val pho_pl = getPartitionInfo(dname, pho_gn+"Photon.eta")
-    val pho_rdd = sc.parallelize(pho_pl, pho_pl.length).flatMap(x=> readDatasets(dname+x.fname, pho_gn, pho_ds, x.begin, x.end))
+    val pho_rdd = sc.parallelize(pho_pl, pho_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, pho_gn, pho_ds, x.begin, x.end))
     val pho_df = createDataFrame(spark, pho_rdd, pho_gn, pho_ds)
     info_df.createOrReplaceTempView("InfoDF")
     pho_df.createOrReplaceTempView("Tdf")
@@ -159,7 +184,7 @@ object SkimWF {
     val genevtinfo_gn = "/GenEvtInfo/"
     val genevtinfo_ds: List[String] = List("GenEvtInfo.runNum", "GenEvtInfo.lumisec", "GenEvtInfo.evtNum", "weight", "scalePDF")
     val genevtinfo_pl = getPartitionInfo(dname, genevtinfo_gn+"weight")
-    val genevtinfo_rdd = sc.parallelize(genevtinfo_pl, genevtinfo_pl.length).flatMap(x=> readDatasets(dname+x.fname, genevtinfo_gn, genevtinfo_ds, x.begin, x.end))
+    val genevtinfo_rdd = sc.parallelize(genevtinfo_pl, genevtinfo_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, genevtinfo_gn, genevtinfo_ds, x.begin, x.end))
     val genevtinfo_df = createDataFrame(spark, genevtinfo_rdd, genevtinfo_gn, genevtinfo_ds)
     genevtinfo_df
   }
@@ -169,7 +194,7 @@ object SkimWF {
     val jet_gn = "/AK4Puppi/"
     val jet_ds: List[String] = List("AK4Puppi.runNum", "AK4Puppi.lumisec", "AK4Puppi.evtNum", "AK4Puppi.eta", "AK4Puppi.pt", "AK4Puppi.phi", "AK4Puppi.chHadFrac", "AK4Puppi.chEmFrac", "AK4Puppi.neuHadFrac", "AK4Puppi.neuEmFrac", "AK4Puppi.mass", "AK4Puppi.csv", "AK4Puppi.nParticles", "AK4Puppi.nCharged" )
     val jet_pl = getPartitionInfo(dname, jet_gn+"AK4Puppi.eta")
-    val jet_rdd = sc.parallelize(jet_pl, jet_pl.length).flatMap(x=> readDatasets(dname+x.fname, jet_gn, jet_ds, x.begin, x.end))
+    val jet_rdd = sc.parallelize(jet_pl, jet_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, jet_gn, jet_ds, x.begin, x.end))
     val jet_df = createDataFrame(spark, jet_rdd, jet_gn, jet_ds)
     info_df.createOrReplaceTempView("InfoDF")
     jet_df.createOrReplaceTempView("Tdf")
@@ -214,19 +239,36 @@ object SkimWF {
                                    Math.acos(Math.cos(puppETphi-phi))
                                  else pdFPhi })
 
+//add Index to a DataFrame
+  def addIndex(df: DataFrame, spark: SparkSession) : DataFrame = {
+    spark.createDataFrame(
+    // Add index
+    df.rdd.zipWithIndex.map{case (r, i) => Row.fromSeq(r.toSeq :+ i)},
+    // Create schema
+    StructType(df.schema.fields :+ StructField("_index", LongType, false))
+    )
+  }
+
   def createVJetDF(sc: SparkContext, spark: SparkSession, dname: String, vaddjet_df: DataFrame) : DataFrame = {
     val vjet_gn = "/CA15Puppi/"
     val vjet_ds: List[String] = List("CA15Puppi.runNum", "CA15Puppi.lumisec", "CA15Puppi.evtNum", "CA15Puppi.eta", "CA15Puppi.pt", "CA15Puppi.phi", "CA15Puppi.chHadFrac", "CA15Puppi.chEmFrac", "CA15Puppi.neuHadFrac", "CA15Puppi.neuEmFrac", "CA15Puppi.mass", "CA15Puppi.csv", "CA15Puppi.nParticles", "CA15Puppi.nCharged" )
     val vjet_pl = getPartitionInfo(dname, vjet_gn+"CA15Puppi.eta")
-    val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(dname+x.fname, vjet_gn, vjet_ds, x.begin, x.end))
+    val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, vjet_gn, vjet_ds, x.begin, x.end))
     val vjet_df = createDataFrame(spark, vjet_rdd, vjet_gn, vjet_ds)
-    vaddjet_df.createOrReplaceTempView("Addjet")
-    vjet_df.createOrReplaceTempView("Vjet")
-    var tdf = spark.sql("SELECT * FROM Vjet, Addjet WHERE Vjet.CA15Puppi_runNum == Addjet.AddCA15Puppi_runNum and Vjet.CA15Puppi_lumisec == Addjet.AddCA15Puppi_lumisec and Vjet.CA15Puppi_evtNum == Addjet.AddCA15Puppi_evtNum").drop("AddCA15Puppi_runNum", "AddCA15Puppi_lumisec", "AddCA15Puppi_evtNum")
+    import spark.implicits._
+    val ai = addIndex(vjet_df, spark)
+    val bi = addIndex(vaddjet_df, spark)
+    ai.createOrReplaceTempView("Vjet")
+    bi.createOrReplaceTempView("Addjet")
+    //var tdf = ai
+      //       .join(bi, Seq("_index"))
+        //     .drop("_index", "AddCA15Puppi_runNum", "AddCA15Puppi_lumisec", "AddCA15Puppi_evtNum")
+    var tdf = spark.sql("SELECT * FROM Vjet, Addjet WHERE Vjet._index == Addjet._index").drop("AddCA15Puppi_runNum", "AddCA15Puppi_lumisec", "AddCA15Puppi_evtNum", "_index")
+
     val fvjet_df = filterVJetDF(spark, tdf).drop("passfilter", "CA15Puppi_nParticles", "CA15Puppi_nCharged", "CA15Puppi_chEmFrac")
     val max_tdf = fvjet_df.groupBy("CA15Puppi_runNum", "CA15Puppi_lumisec", "CA15Puppi_evtNum").max("CA15Puppi_pt").withColumnRenamed("max(CA15Puppi_pt)", "pt")
     val count_tdf = fvjet_df.groupBy("CA15Puppi_runNum", "CA15Puppi_lumisec", "CA15Puppi_evtNum").count()
-    count_tdf.printSchema
+    //count_tdf.printSchema
     max_tdf.createOrReplaceTempView("maxpt")
     count_tdf.createOrReplaceTempView("count")
     fvjet_df.createOrReplaceTempView("filteredJets")
@@ -241,7 +283,7 @@ object SkimWF {
     val vaddjet_ds: List[String]= List("AddCA15Puppi.runNum", "AddCA15Puppi.lumisec", "AddCA15Puppi.evtNum", "AddCA15Puppi.tau1", "AddCA15Puppi.tau2", "AddCA15Puppi.tau3", "AddCA15Puppi.mass_sd0", "AddCA15Puppi.sj1_csv", "AddCA15Puppi.sj2_csv", "AddCA15Puppi.sj3_csv",  "AddCA15Puppi.sj4_csv")
     val vaddjet_gn = "/AddCA15Puppi/"
     val vjet_pl = getPartitionInfo(dname, vaddjet_gn+"AddCA15Puppi.tau1")
-    val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(dname+x.fname, vaddjet_gn, vaddjet_ds, x.begin, x.end))
+    val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, vaddjet_gn, vaddjet_ds, x.begin, x.end))
     var vjet_df = createDataFrame(spark, vjet_rdd, vaddjet_gn, vaddjet_ds)
     vjet_df = vjet_df.withColumn("tau21", taudivUDF($"AddCA15Puppi_tau1", $"AddCA15Puppi_tau2"))
     vjet_df = vjet_df.withColumn("tau32", taudivUDF($"AddCA15Puppi_tau2", $"AddCA15Puppi_tau3"))
