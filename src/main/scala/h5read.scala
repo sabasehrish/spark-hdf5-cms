@@ -23,48 +23,56 @@ object H5Read {
     return (new File(directoryName)).listFiles.filter(_.isDirectory).map(_.getName)
   }
 
-  private def getListOfFiles(dir: String):List[File] = {
-    val d = new File(dir)
+ private def getListOfFiles(d: File):Array[File] = {
     if (d.exists && d.isDirectory) {
-      d.listFiles.filter(_.isFile).toList
+      val files = d.listFiles
+      files ++ files.filter(_.isDirectory).flatMap(getListOfFiles).toList
     } else {
-      List[File]()
+      Array[File]()
     }
   }
 
-  case class PartitionInfo(fname: String, begin: Long, end: Long) extends Serializable
+ case class PartitionInfo(dname: String, fname: String, begin: Long, end: Long) extends Serializable
 
   def getPartitionInfo(dname: String, ds_name: String): Array[PartitionInfo] = {
     val defaultchunk = 100000
-    val files = getListOfFiles(dname)
+    val d = new File(dname)
+    val files = getListOfFiles(d).filter(_.isFile)
     val arrayBuf = ArrayBuffer[PartitionInfo]()
     for (file <- files) {
-       val file_id = H5.H5Fopen(dname+file.getName, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT)
+       val filename = file.getName
+       val dirname = file.getParent+"/"
+       val file_id = H5.H5Fopen(dirname+filename, HDF5Constants.H5F_ACC_RDONLY, HDF5Constants.H5P_DEFAULT)
        val dsetid = H5.H5Dopen(file_id, ds_name, HDF5Constants.H5P_DEFAULT)
+       if(dsetid > 0) {
        val sz = Array[Long](0)
        val dspaceid = H5.H5Dget_space(dsetid)
        H5.H5Sget_simple_extent_dims(dspaceid, sz, null)
        val arrlen = sz(0).toInt
        if (arrlen < defaultchunk) {
-         arrayBuf+=PartitionInfo(file.getName, 0, arrlen)
+         arrayBuf+=PartitionInfo(dirname, filename, 0, arrlen)
        } else {
        val numchunks = arrlen/defaultchunk
        var sindex = 0
        var eindex = defaultchunk
        for (j <- 0 to numchunks-1) {
-         arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
+         arrayBuf+=PartitionInfo(dirname, filename, sindex, (eindex-1))
          sindex = eindex
          eindex = eindex + defaultchunk
        }
-       eindex = eindex-defaultchunk+arrlen%defaultchunk
-       arrayBuf+=PartitionInfo(file.getName, sindex, (eindex-1))
+       val lastchunksize = arrlen%defaultchunk
+       if (lastchunksize != 0) {
+       arrayBuf+=PartitionInfo(dirname, filename, sindex, arrlen-1)
        }
+       }
+      } 
     }
     return arrayBuf.toArray
   }
 
   /*Reading Dataset from HDF5 files*/
   def readDataset[T:ClassTag](dsetid: Int, datatype: Int, begin: Long, end: Long) : Array[T] = {
+      //println("Begin: " + begin + ", end: " + end + "diff: " + (end-begin).toInt)
       val result = Array.ofDim[T]((end-begin).toInt)
       val memtype_id = H5.H5Tcopy(datatype)
       var offset = Array[Long](begin)
