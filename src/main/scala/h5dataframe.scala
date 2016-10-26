@@ -12,7 +12,7 @@ import org.apache.spark.sql.types._
 object H5DataFrame {
 
 /*Creating Spark DataFrame from HDF5 Datasets */
-  def createDataFrame(spark: SparkSession, rdd: RDD[Row], gname: String) : DataFrame = {
+  def createH5DataFrame(spark: SparkSession, rdd: RDD[Row], gname: String) : DataFrame = {
     val schema = gname match {
                           case "/Muon/"          => StructType(List(StructField("Muon_eta", FloatType, false), StructField("Muon_pt", FloatType, false), StructField("Muon_phi", FloatType, false), StructField("Muon_evtNum", IntegerType, false), StructField("Muon_runNum", IntegerType, false), StructField("Muon_lumisec", IntegerType, false), StructField("Muon_chHadIso", FloatType, false), StructField("Muon_neuHadIso", FloatType, false), StructField("Muon_puIso", FloatType, false), StructField("Muon_pogIDBits", IntegerType, false), StructField("Muon_gammaIso", FloatType, false)))
  
