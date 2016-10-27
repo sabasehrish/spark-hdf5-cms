@@ -12,7 +12,12 @@ import org.apache.spark.sql.types._
 object H5DataFrame {
 
 /*Creating Spark DataFrame from HDF5 Datasets */
+  
   def createH5DataFrame(spark: SparkSession, rdd: RDD[Row], gname: String) : DataFrame = {
+    return spark.createDataFrame(rdd, createH5Schema(gname))
+  }
+
+  def createH5Schema(gname: String) = {
     val schema = gname match {
                           case "/Muon/"          => StructType(List(StructField("Muon_eta", FloatType, false), StructField("Muon_pt", FloatType, false), StructField("Muon_phi", FloatType, false), StructField("Muon_evtNum", IntegerType, false), StructField("Muon_runNum", IntegerType, false), StructField("Muon_lumisec", IntegerType, false), StructField("Muon_chHadIso", FloatType, false), StructField("Muon_neuHadIso", FloatType, false), StructField("Muon_puIso", FloatType, false), StructField("Muon_pogIDBits", IntegerType, false), StructField("Muon_gammaIso", FloatType, false)))
  
@@ -32,6 +37,6 @@ object H5DataFrame {
 
                           case "/GenEvtInfo/"    => StructType(List(StructField("runNum", IntegerType, false), StructField("lumiSec", IntegerType, false), StructField("evtNum", IntegerType, false), StructField("weight", FloatType, false), StructField("scalePDF", FloatType, false)))
     }
-    return spark.createDataFrame(rdd, schema)
+    schema
   }
  }
