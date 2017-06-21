@@ -3,10 +3,10 @@ import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 
 object Histo {
-  def createHistogram(sc: SparkContext, spark: SparkSession, dname: String) {
+  def createHistogram(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) {
     import spark.implicits._
-    val info_df = createInfoDF(sc, spark, dname)
-    val elec_df = createElectronDF(sc, spark, dname) 
+    val info_df = createInfoDF(sc, spark, dname, chunkSize)
+    val elec_df = createElectronDF(sc, spark, dname, chunkSize) 
     val df = createFilteredElectronDF(spark, elec_df, info_df) 
     var t0 = System.nanoTime()
     //create a histogram here 

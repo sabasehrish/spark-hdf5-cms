@@ -13,13 +13,13 @@ import org.apache.hadoop.hive.ql.exec.UDF
 import org.apache.spark.sql.types._
 
 object DF {
-  def createMuonDF(sc: SparkContext, spark: SparkSession, dname: String) : DataFrame = {
+  def createMuonDF(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) : DataFrame = {
     import spark.implicits._
     val muon_gn = "/Muon/"
     val muon_ds: List[String] = List("Muon.eta", "Muon.pt", "Muon.phi", "Muon.evtNum", 
       "Muon.runNum", "Muon.lumisec", "Muon.chHadIso", "Muon.neuHadIso", "Muon.puIso", 
       "Muon.pogIDBits", "Muon.gammaIso")
-    val partitionlist = getPartitionInfo(dname, muon_gn+"Muon.eta")
+    val partitionlist = getPartitionInfo(dname, muon_gn+"Muon.eta", chunkSize)
     val muon_rdd = sc.parallelize(partitionlist, partitionlist.length).flatMap(x=> readDatasets(x.dname+x.fname, muon_gn, muon_ds, x.begin, x.end))
     val muon_df = createH5DataFrame(spark, muon_rdd, muon_gn)
     muon_df
@@ -37,11 +37,11 @@ object DF {
     maxdf.withColumn("Muon_Mass", lit(muonMass))
   }
 
-  def createTauDF(sc: SparkContext, spark: SparkSession, dname: String) : DataFrame = {
+  def createTauDF(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) : DataFrame = {
     import spark.implicits._
     val tau_gn = "/Tau/"
     val tau_ds: List[String] = List("Tau.eta", "Tau.pt", "Tau.phi", "Tau.evtNum", "Tau.runNum", "Tau.lumisec", "Tau.hpsDisc", "Tau.rawIso3Hits")
-    val tau_pl = getPartitionInfo(dname, tau_gn+"Tau.eta")
+    val tau_pl = getPartitionInfo(dname, tau_gn+"Tau.eta", chunkSize)
     val tau_rdd = sc.parallelize(tau_pl, tau_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, tau_gn, tau_ds, x.begin, x.end))
     val tau_df = createH5DataFrame(spark, tau_rdd, tau_gn)
     tau_df
@@ -56,10 +56,10 @@ object DF {
     ftdf
   }
 
-  def createInfoDF(sc: SparkContext, spark: SparkSession, dname: String) : DataFrame = {
+  def createInfoDF(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) : DataFrame = {
     val info_gn = "/Info/"
     val info_ds: List[String] = List("runNum", "lumiSec", "evtNum", "rhoIso", "metFilterFailBits", "pfMET", "pfMETphi", "puppET", "puppETphi")
-    val info_pl = getPartitionInfo(dname, info_gn+"evtNum")
+    val info_pl = getPartitionInfo(dname, info_gn+"evtNum", chunkSize)
     val info_rdd = sc.parallelize(info_pl, info_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, info_gn, info_ds, x.begin, x.end))
     val info_df = createH5DataFrame(spark, info_rdd, info_gn)
     info_df.createOrReplaceTempView("infot")
@@ -67,11 +67,11 @@ object DF {
     fdf
   }
 
-  def createElectronDF(sc: SparkContext, spark: SparkSession, dname: String) : DataFrame = {
+  def createElectronDF(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) : DataFrame = {
     import spark.implicits._
     val elec_gn = "/Electron/"
     val elec_ds: List[String] = List("Electron.runNum", "Electron.lumisec", "Electron.evtNum", "Electron.eta", "Electron.pt", "Electron.phi", "Electron.chHadIso", "Electron.neuHadIso", "Electron.gammaIso", "Electron.scEta", "Electron.sieie", "Electron.hovere", "Electron.eoverp", "Electron.dEtaIn", "Electron.dPhiIn", "Electron.ecalEnergy", "Electron.d0", "Electron.dz", "Electron.nMissingHits", "Electron.isConv")
-    val elec_pl = getPartitionInfo(dname, elec_gn+"Electron.eta")
+    val elec_pl = getPartitionInfo(dname, elec_gn+"Electron.eta", chunkSize)
     val elec_rdd = sc.parallelize(elec_pl, elec_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, elec_gn, elec_ds, x.begin, x.end))
     val elec_df = createH5DataFrame(spark, elec_rdd, elec_gn)
     elec_df
@@ -94,12 +94,12 @@ object DF {
     ftdf1.withColumn("Electron_Mass", lit(electronMass))
   }
 
-  def createPhotonDF(sc: SparkContext, spark: SparkSession, dname: String, info_df: DataFrame) : DataFrame = {
+  def createPhotonDF(sc: SparkContext, spark: SparkSession, dname: String, info_df: DataFrame, chunkSize: Int) : DataFrame = {
      /*Photon DF related operations*/
     import spark.implicits._
     val pho_gn = "/Photon/"
     val pho_ds: List[String] = List("Photon.runNum", "Photon.lumisec", "Photon.evtNum", "Photon.eta", "Photon.pt", "Photon.phi", "Photon.chHadIso", "Photon.scEta", "Photon.neuHadIso", "Photon.gammaIso", "Photon.sieie", "Photon.sthovere")
-    val pho_pl = getPartitionInfo(dname, pho_gn+"Photon.eta")
+    val pho_pl = getPartitionInfo(dname, pho_gn+"Photon.eta", chunkSize)
     val pho_rdd = sc.parallelize(pho_pl, pho_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, pho_gn, pho_ds, x.begin, x.end))
     val pho_df = createH5DataFrame(spark, pho_rdd, pho_gn)
     val ftdf = pho_df.join(info_df,
@@ -115,21 +115,21 @@ object DF {
     maxdf
   }
 
-  def createGenInfoDF(sc: SparkContext, spark: SparkSession, dname: String) : DataFrame = {
+  def createGenInfoDF(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) : DataFrame = {
        /*Gen Event Info to calculate sum of weights*/
     val genevtinfo_gn = "/GenEvtInfo/"
     val genevtinfo_ds: List[String] = List("GenEvtInfo.runNum", "GenEvtInfo.lumisec", "GenEvtInfo.evtNum", "weight", "scalePDF")
-    val genevtinfo_pl = getPartitionInfo(dname, genevtinfo_gn+"weight")
+    val genevtinfo_pl = getPartitionInfo(dname, genevtinfo_gn+"weight", chunkSize)
     val genevtinfo_rdd = sc.parallelize(genevtinfo_pl, genevtinfo_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, genevtinfo_gn, genevtinfo_ds, x.begin, x.end))
     val genevtinfo_df = createH5DataFrame(spark, genevtinfo_rdd, genevtinfo_gn)
     genevtinfo_df
   }
 
-  def createJetDF(sc: SparkContext, spark: SparkSession, dname: String, info_df: DataFrame, vjet_df: DataFrame) : DataFrame = {
+  def createJetDF(sc: SparkContext, spark: SparkSession, dname: String, info_df: DataFrame, vjet_df: DataFrame, chunkSize: Int) : DataFrame = {
     import spark.implicits._
     val jet_gn = "/AK4Puppi/"
     val jet_ds: List[String] = List("AK4Puppi.runNum", "AK4Puppi.lumisec", "AK4Puppi.evtNum", "AK4Puppi.eta", "AK4Puppi.pt", "AK4Puppi.phi", "AK4Puppi.chHadFrac", "AK4Puppi.chEmFrac", "AK4Puppi.neuHadFrac", "AK4Puppi.neuEmFrac", "AK4Puppi.mass", "AK4Puppi.csv", "AK4Puppi.nParticles", "AK4Puppi.nCharged" )
-    val jet_pl = getPartitionInfo(dname, jet_gn+"AK4Puppi.eta")
+    val jet_pl = getPartitionInfo(dname, jet_gn+"AK4Puppi.eta", chunkSize)
     val jet_rdd = sc.parallelize(jet_pl, jet_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, jet_gn, jet_ds, x.begin, x.end))
     val jet_df = createH5DataFrame(spark, jet_rdd, jet_gn)
     //Step 1: Join with Info DF
@@ -193,10 +193,10 @@ object DF {
     )
   }
 
-  def createVJetDF(sc: SparkContext, spark: SparkSession, dname: String, vaddjet_df: DataFrame) : DataFrame = {
+  def createVJetDF(sc: SparkContext, spark: SparkSession, dname: String, vaddjet_df: DataFrame, chunkSize: Int) : DataFrame = {
     val vjet_gn = "/CA15Puppi/"
     val vjet_ds: List[String] = List("CA15Puppi.runNum", "CA15Puppi.lumisec", "CA15Puppi.evtNum", "CA15Puppi.eta", "CA15Puppi.pt", "CA15Puppi.phi", "CA15Puppi.chHadFrac", "CA15Puppi.chEmFrac", "CA15Puppi.neuHadFrac", "CA15Puppi.neuEmFrac", "CA15Puppi.mass", "CA15Puppi.csv", "CA15Puppi.nParticles", "CA15Puppi.nCharged" )
-    val vjet_pl = getPartitionInfo(dname, vjet_gn+"CA15Puppi.eta")
+    val vjet_pl = getPartitionInfo(dname, vjet_gn+"CA15Puppi.eta", chunkSize)
     val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, vjet_gn, vjet_ds, x.begin, x.end))
     val vjet_df = createH5DataFrame(spark, vjet_rdd, vjet_gn)
     import spark.implicits._
@@ -223,11 +223,11 @@ object DF {
     maxdf
   }
 
-  def createVAddJetDF(sc: SparkContext, spark: SparkSession, dname:String) : DataFrame = {
+  def createVAddJetDF(sc: SparkContext, spark: SparkSession, dname:String, chunkSize: Int) : DataFrame = {
     import spark.implicits._
     val vaddjet_ds: List[String]= List("AddCA15Puppi.runNum", "AddCA15Puppi.lumisec", "AddCA15Puppi.evtNum", "AddCA15Puppi.tau1", "AddCA15Puppi.tau2", "AddCA15Puppi.tau3", "AddCA15Puppi.mass_sd0", "AddCA15Puppi.sj1_csv", "AddCA15Puppi.sj2_csv", "AddCA15Puppi.sj3_csv",  "AddCA15Puppi.sj4_csv")
     val vaddjet_gn = "/AddCA15Puppi/"
-    val vjet_pl = getPartitionInfo(dname, vaddjet_gn+"AddCA15Puppi.tau1")
+    val vjet_pl = getPartitionInfo(dname, vaddjet_gn+"AddCA15Puppi.tau1", chunkSize)
     val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, vaddjet_gn, vaddjet_ds, x.begin, x.end))
     var vjet_df = createH5DataFrame(spark, vjet_rdd, vaddjet_gn)
     vjet_df = vjet_df.withColumn("tau21", taudivUDF($"AddCA15Puppi_tau1", $"AddCA15Puppi_tau2"))

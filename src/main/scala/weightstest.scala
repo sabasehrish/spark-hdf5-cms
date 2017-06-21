@@ -32,7 +32,7 @@ object SoWTest {
        /*Gen Event Info to calculate sum of weights*/
     val genevtinfo_gn = "/GenEvtInfo/"
     val genevtinfo_ds: List[String] = List("GenEvtInfo.runNum", "GenEvtInfo.lumisec", "GenEvtInfo.evtNum", "weight", "scalePDF")
-    val genevtinfo_pl = getPartitionInfo(dname, genevtinfo_gn+"weight")
+    val genevtinfo_pl = getPartitionInfo(dname, genevtinfo_gn+"weight", 100000)
     val genevtinfo_rdd = sc.parallelize(genevtinfo_pl, genevtinfo_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, genevtinfo_gn, genevtinfo_ds, x.begin, x.end))
     val genevtinfo_df = createH5DataFrame(spark, genevtinfo_rdd, genevtinfo_gn)
     genevtinfo_df

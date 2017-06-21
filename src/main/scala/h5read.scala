@@ -34,8 +34,8 @@ object H5Read {
 
  case class PartitionInfo(dname: String, fname: String, begin: Long, end: Long) extends Serializable
 
-  def getPartitionInfo(dname: String, ds_name: String): Array[PartitionInfo] = {
-    val defaultchunk = 100000
+  def getPartitionInfo(dname: String, ds_name: String, chunkSize: Int): Array[PartitionInfo] = {
+    val defaultchunk = chunkSize
     val d = new File(dname)
     val files = getListOfFiles(d).filter(_.isFile)
     val arrayBuf = ArrayBuffer[PartitionInfo]()
