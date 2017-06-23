@@ -23,7 +23,7 @@ object Filters {
     
     //SQL replacement for muonpassUDF
     muon_df.createOrReplaceTempView("muons")
-    val fdf = spark.sql("SELECT *, (((Muon_pogIDBits & " + kPOG + ")!=0)  AND ((Muon_chHadIso + GREATEST(Muon_neuHadIso + Muon_gammaIso - (0.5* Muon_puIso), 0)) < (0.12* Muon_pt))) AS passfilter FROM temp")
+    val fdf = spark.sql("SELECT *, (((Muon_pogIDBits & " + kPOG + ")!=0)  AND ((Muon_chHadIso + GREATEST(Muon_neuHadIso + Muon_gammaIso - (0.5* Muon_puIso), 0)) < (0.12* Muon_pt))) AS passfilter FROM muons")
 
 
     fdf.createOrReplaceTempView("muons")
@@ -93,7 +93,14 @@ object Filters {
     var fdf = photon_df.withColumn("rhoArea0", rhoeffareaPhoUDF(eta_range, eff_area_0)($"rhoIso", $"Photon_sceta"))
     fdf = fdf.withColumn("rhoArea1", rhoeffareaPhoUDF(eta_range, eff_area_1)($"rhoIso", $"Photon_sceta"))
     fdf = fdf.withColumn("rhoArea2", rhoeffareaPhoUDF(eta_range, eff_area_2)($"rhoIso", $"Photon_sceta"))
-    fdf = fdf.withColumn("passfilter", photonpassUDF($"Photon_chHadIso", $"Photon_neuHadIso", $"Photon_gammaIso", $"Photon_scEta", $"Photon_sthovere", $"Photon_sieie", $"Photon_pt", $"rhoArea0", $"rhoArea1", $"rhoArea2"))
+    
+    //Old UDF function for photonpassUDF
+    //fdf = fdf.withColumn("passfilter", photonpassUDF($"Photon_chHadIso", $"Photon_neuHadIso", $"Photon_gammaIso", $"Photon_scEta", $"Photon_sthovere", $"Photon_sieie", $"Photon_pt", $"rhoArea0", $"rhoArea1", $"rhoArea2"))
+    
+    //SQL replacement for photonpassUDF
+    fdf.createOrReplaceTempView("photons")
+    fdf = spark.sql("SELECT *, CASE WHEN (Photon_sthovere <= 0.05) THEN true ELSE (ABS(Photon_scEta) <= 1.479 AND ((Photon_sieie <= 0.0103) OR (GREATEST((Photon_chHadIso - rhoarea0), 0.0) <= 2.44) OR (GREATEST((Photon_neuHadIso - rhoarea1), 0.0) <= (2.57 + EXP(0.0044* Photon_pt*0.5809))) OR (GREATEST((Photon_gammaIso - rhoarea2), 0.0) <= (1.92+0.0043* Photon_pt)))) OR (ABS(Photon_scEta) > 1.479 AND  ((Photon_sieie <= 0.0277) OR (GREATEST((Photon_chHadIso - rhoarea0), 0.0) <= 1.84) OR (GREATEST((Photon_neuHadIso - rhoarea1), 0.0) <= (4.00 + EXP(0.0040* Photon_pt*0.9402))) OR (GREATEST((Photon_gammaIso - rhoarea2), 0.0) <= (2.15+0.0041* Photon_pt)))) END AS psalter FROM photons")
+
     fdf.createOrReplaceTempView("photons")
     val fdf1 = spark.sql("Select * FROM photons WHERE Photon_pt >= 175 and Photon_eta < 1.4442 and Photon_eta > -1.4442 and passfilter")
     fdf1
