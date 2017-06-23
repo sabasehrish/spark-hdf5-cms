@@ -125,8 +125,24 @@ object Filters {
   def filterElectronDF(spark: SparkSession, e_df: DataFrame) : DataFrame = {
     import spark.implicits._
     var fdf = e_df.withColumn("rhoEffarea", rhoeffareaUDF($"rhoIso", $"Electron_eta"))
-    fdf = fdf.withColumn("passfilter1", elecpassUDF($"Electron_pt", $"Electron_isConv", $"Electron_chHadIso", $"Electron_gammaIso", $"Electron_neuHadIso", $"rhoEffarea", $"Electron_scEta", $"Electron_dEtaIn", $"Electron_dPhiIn", $"Electron_sieie"))
-    fdf = fdf.withColumn("passfilter2", elecpass2UDF($"Electron_scEta", $"Electron_hovere", $"Electron_eoverp", $"Electron_ecalEnergy", $"Electron_d0", $"Electron_dz", $"Electron_nMissingHits"))
+    
+
+
+    //SQL Replacement for the old UDF func for passfilter1
+    fdf.createOrReplaceTempView("elecFilter")
+    fdf = spark.sql("SELECT *, CASE WHEN Electron_isConv = 1 THEN false ELSE (((ABS(Electron_scEta) < 1.479) AND ((iso < (0.126 * Electron_pt)) OR (ABS(Electron_dEtaIn)< 0.01520)  OR (ABS(Electron_dPhiIn)< 0.21600) OR (Electron_sieie < 0.01140))) OR ((ABS(Electron_scEta) >= (0.144 * Electron_pt)) AND ((iso < (0.144 * Electron_pt)) OR (ABS(Electron_dEtaIn)< 0.01130) OR (ABS(Electron_dPhiIn)< 0.23700) OR (Electron_sieie< 0.03520)))) END AS passfilter1 FROM (SELECT *, Electron_chHadIso + GREATEST(0.0, Electron_gammaIso + Electron_neuHadIso - rhoEffarea) AS iso FROM elecFilter)")
+    
+
+    //Old UDF function for passfilter1
+    //fdf = fdf.withColumn("passfilter1", elecpassUDF($"Electron_pt", $"Electron_isConv", $"Electron_chHadIso", $"Electron_gammaIso", $"Electron_neuHadIso", $"rhoEffarea", $"Electron_scEta", $"Electron_dEtaIn", $"Electron_dPhiIn", $"Electron_sieie"))
+
+    
+    //SQL Replacement for passfilter2 UDF func
+    fdf.createOrReplaceTempView("elecFilter")
+    fdf = spark.sql("SELECT *, (((ABS(Electron_scEta) < 1.479) AND ((Electron_hovere < 0.18100) OR (ABS(1.0 - Electron_eoverp) < (0.20700*Electron_ecalEnergy)) OR (ABS(Electron_d0) < 0.05640) OR (ABS(Electron_dz) < 0.47200) OR (Electron_nMissingHits <=  2))) OR ((ABS(Electron_scEta) >= 1.479) AND ( (Electron_hovere < 0.11600) OR (ABS(1.0 - Electron_eoverp) < (0.17400*Electron_ecalEnergy)) OR (ABS(Electron_d0) < 0.22200) OR (ABS(Electron_dz)< 0.92100)OR (Electron_nMissingHits <=  3)))) AS t FROM elecFilter")
+
+    //Old UDF function for passfiler2
+    //fdf = fdf.withColumn("passfilter2", elecpass2UDF($"Electron_scEta", $"Electron_hovere", $"Electron_eoverp", $"Electron_ecalEnergy", $"Electron_d0", $"Electron_dz", $"Electron_nMissingHits"))
     fdf.createOrReplaceTempView("Electrons")
     val fdf1 = spark.sql("SELECT * FROM Electrons WHERE Electron_pt >= 10 and Electron_eta < 2.5 and Electron_eta > -2.5 and passfilter1 and passfilter2")
     fdf1
@@ -145,7 +161,13 @@ object Filters {
 
   def filterJetDF(spark: SparkSession, jet_df: DataFrame) : DataFrame = {
     import spark.implicits._
-    val fdf = jet_df.withColumn("passfilter", jetpassUDF($"AK4Puppi_neuHadFrac", $"AK4Puppi_neuEmFrac", $"AK4Puppi_nParticles", $"AK4Puppi_eta", $"AK4Puppi_chHadFrac", $"AK4Puppi_nCharged", $"AK4Puppi_chEmFrac"))
+    //OLD UDF filter
+    //val fdf = jet_df.withColumn("passfilter", jetpassUDF($"AK4Puppi_neuHadFrac", $"AK4Puppi_neuEmFrac", $"AK4Puppi_nParticles", $"AK4Puppi_eta", $"AK4Puppi_chHadFrac", $"AK4Puppi_nCharged", $"AK4Puppi_chEmFrac"))
+    
+    //SQL replacement for UDF
+    jet_df.createOrReplaceTempView("Jets")
+    val fdf = spark.sql("SELECT *, (AK4Puppi_neuHadFrac >= 0.99) OR AK4Puppi_neuEmFrac >= 0.99 OR AK4Puppi_nParticles <= 1 OR ((AK4Puppi_eta < 2.4 AND AK4Puppi_eta > -2.4) AND (AK4Puppi_chHadFrac == 0 OR AK4Puppi_nCharged == 0 OR AK4Puppi_chEmFrac >= 0.99)) AS passfilter FROM Jets")
+
     fdf.createOrReplaceTempView("Jets")
     val fdf1 = spark.sql("SELECT * FROM Jets WHERE AK4Puppi_pt >=30 and AK4Puppi_eta < 4.5 and AK4Puppi_eta > -4.5 and passfilter")
     fdf1
@@ -153,7 +175,14 @@ object Filters {
 
   def filterVJetDF(spark: SparkSession, vjet_df: DataFrame) : DataFrame = {
     import spark.implicits._
-    val fdf = vjet_df.withColumn("passfilter", jetpassUDF($"CA15Puppi_neuHadFrac", $"CA15Puppi_neuEmFrac", $"CA15Puppi_nParticles", $"CA15Puppi_eta", $"CA15Puppi_chHadFrac", $"CA15Puppi_nCharged", $"CA15Puppi_chEmFrac"))
+    //Old UDF func
+    //val fdf = vjet_df.withColumn("passfilter", jetpassUDF($"CA15Puppi_neuHadFrac", $"CA15Puppi_neuEmFrac", $"CA15Puppi_nParticles", $"CA15Puppi_eta", $"CA15Puppi_chHadFrac", $"CA15Puppi_nCharged", $"CA15Puppi_chEmFrac"))
+    
+    //SQL Replacement for UDF
+    vjet_df.createOrReplaceTempView("Vjets")
+    val fdf = spark.sql("SELECT *, (CA15Puppi_neuHadFrac >= 0.99) OR CA15Puppi_neuEmFrac >= 0.99 OR CA15Puppi_nParticles <= 1 OR ((CA15Puppi_eta < 2.4 AND CA15Puppi_eta > -2.4) AND (CA15Puppi_chHadFrac == 0 OR CA15Puppi_nCharged == 0 OR CA15Puppi_chEmFrac >= 0.99)) AS passfilter FROM VJets")
+
+
     fdf.createOrReplaceTempView("VJets")
     val fdf1 = spark.sql("SELECT * FROM VJets WHERE CA15Puppi_pt >=150 and CA15Puppi_eta < 2.5 and CA15Puppi_eta > -2.5 and passfilter")
     fdf1
