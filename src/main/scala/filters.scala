@@ -17,7 +17,15 @@ object Filters {
 
   def filterMuonDF(spark: SparkSession, kPOG: Int, muon_df: DataFrame) : DataFrame = {
     import spark.implicits._
-    val fdf = muon_df.withColumn("passfilter", muonpassUDF(lit(kPOG), $"Muon_chHadIso", $"Muon_neuHadIso", $"Muon_gammaIso", $"Muon_puIso", $"Muon_pogIDBits", $"Muon_pt"))
+    
+    //Old UDF function for muonpassUDF
+    //val fdf = muon_df.withColumn("passfilter", muonpassUDF(lit(kPOG), $"Muon_chHadIso", $"Muon_neuHadIso", $"Muon_gammaIso", $"Muon_puIso", $"Muon_pogIDBits", $"Muon_pt"))
+    
+    //SQL replacement for muonpassUDF
+    muon_df.createOrReplaceTempView("muons")
+    val fdf = spark.sql("SELECT *, (((Muon_pogIDBits & " + kPOG + ")!=0)  AND ((Muon_chHadIso + GREATEST(Muon_neuHadIso + Muon_gammaIso - (0.5* Muon_puIso), 0)) < (0.12* Muon_pt))) AS passfilter FROM temp")
+
+
     fdf.createOrReplaceTempView("muons")
     val fdf1 = spark.sql("SELECT * FROM muons WHERE Muon_pt >= 10 and Muon_eta > -2.4 and Muon_eta < 2.4 and passfilter")
     fdf1
