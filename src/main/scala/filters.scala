@@ -33,7 +33,15 @@ object Filters {
 
   def filterTauDF(spark: SparkSession, tau_df: DataFrame) : DataFrame = {
     import spark.implicits._
-    val fdf = tau_df.withColumn("passfilter", taupassUDF($"Tau_hpsDisc", $"Tau_rawIso3Hits"))
+    
+    //Old UDF function for taupassUDF
+    //val fdf = tau_df.withColumn("passfilter", taupassUDF($"Tau_hpsDisc", $"Tau_rawIso3Hits"))
+    
+
+    //SQL Replacement for udf function
+    tau_df.createOrReplaceTempView("taus")
+    val fdf = spark.sql("SELECT *, (((Tau_hpsDisc & 65536) = 65536) AND (Tau_rawIso3Hits <= 5)) AS passfilter FROM taus")
+
     fdf.createOrReplaceTempView("taus")
     val fdf1 = spark.sql("SELECT * FROM taus WHERE Tau_pt >= 10 and Tau_eta > -2.3 and Tau_eta < 2.3 and passfilter")
     fdf1
