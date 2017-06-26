@@ -164,7 +164,12 @@ object Filters {
 
   def filterElectronDF(spark: SparkSession, e_df: DataFrame) : DataFrame = {
     import spark.implicits._
-    var fdf = e_df.withColumn("rhoEffarea", rhoeffareaUDF($"rhoIso", $"Electron_eta"))
+    //Old UDF function rhoeffareaUDF
+    //var fdf = e_df.withColumn("rhoEffarea", rhoeffareaUDF($"rhoIso", $"Electron_eta"))
+    
+    //SQL replacement for UDF rhoeffareaUDF
+    e_df.createOrReplaceTempView("Electrons")
+    var fdf = spark.sql("SELECT *, rhoIso*(CASE WHEN Electron_eta =0.0 THEN 0.1752 WHEN Electron_eta =0.8 THEN 0.1862 WHEN Electron_eta =1.3 THEN 0.1411 WHEN Electron_eta =2.0 THEN 0.1534 WHEN Electron_eta =2.2 THEN 0.1903 WHEN Electron_eta =2.3 THEN 0.2243 WHEN Electron_eta =2.4 THEN 0.2687 END) AS rhoEffarea FROM Electrons")
     
 
 
