@@ -90,10 +90,27 @@ object Filters {
     val eff_area_0 = Array(0.0157f, 0.0143f, 0.0115f, 0.0094f, 0.0095f, 0.0068f, 0.0053f)
     val eff_area_1 = Array(0.0143f, 0.0210f, 0.0147f, 0.0082f, 0.0124f, 0.0186f, 0.0320f)
     val eff_area_2 = Array(0.0725f, 0.0604f, 0.0320f, 0.0512f, 0.0766f, 0.0949f, 0.1160f)
-    var fdf = photon_df.withColumn("rhoArea0", rhoeffareaPhoUDF(eta_range, eff_area_0)($"rhoIso", $"Photon_sceta"))
-    fdf = fdf.withColumn("rhoArea1", rhoeffareaPhoUDF(eta_range, eff_area_1)($"rhoIso", $"Photon_sceta"))
-    fdf = fdf.withColumn("rhoArea2", rhoeffareaPhoUDF(eta_range, eff_area_2)($"rhoIso", $"Photon_sceta"))
     
+    //Old UDF functions for rhoeffareaPhoUDF
+    //var fdf = photon_df.withColumn("rhoArea0", rhoeffareaPhoUDF(eta_range, eff_area_0)($"rhoIso", $"Photon_sceta"))
+    //fdf = fdf.withColumn("rhoArea1", rhoeffareaPhoUDF(eta_range, eff_area_1)($"rhoIso", $"Photon_sceta"))
+    //fdf = fdf.withColumn("rhoArea2", rhoeffareaPhoUDF(eta_range, eff_area_2)($"rhoIso", $"Photon_sceta"))
+    
+
+    //SQL replacement for rhoeffarePhoUDF
+    //version 1 (broken)
+    //spark.sql("SELECT *, (SELECT effArea.col2  FROM (VALUES (0,0.0), (1,1.0), (2,1.479), (3,2.0), (4,2.2), (5,2.3), (6,2.4)) AS etaRange INNER JOIN (VALUES (0,0.0157), (1,0.0143), (2,0.0115), (3,0.0094), (4,0.0095), (5,0.0068), (6,0.0053)) AS effArea ON etaRange.col1 = effArea.col1 WHERE etaRange.col2=Photon_sceta) AS " + colname + " FROM " + tablename).show() // needs outer apply 
+    //Too time consuming to make one giant script so values are hardcoded
+    photon_df.createOrReplaceTempView("photons")
+    var fdf = spark.sql("SELECT *, rhoIso*(CASE WHEN Photon_sceta=0.0 THEN 0.0157 WHEN Photon_sceta=1.0 THEN 0.0143 WHEN Photon_sceta=1.479 THEN 0.0115 WHEN Photon_sceta=2.0 THEN 0.0094 WHEN Photon_sceta=2.2 THEN 0.0095 WHEN Photon_sceta=2.3 THEN 0.0068 WHEN Photon_sceta=2.4 THEN 0.0053 END) AS rhoArea0 FROM photons")
+    
+    fdf.createOrReplaceTempView("photons")
+    fdf = spark.sql("SELECT *, rhoIso*(CASE WHEN Photon_sceta=0.0 THEN 0.0143 WHEN Photon_sceta=1.0 THEN 0.0210 WHEN Photon_sceta=1.479 THEN 0.0147 WHEN Photon_sceta=2.0 THEN 0.0082 WHEN Photon_sceta=2.2 THEN 0.0124 WHEN Photon_sceta=2.3 THEN 0.0186 WHEN Photon_sceta=2.4 THEN 0.0320 END) AS rhoArea1 FROM photons")
+
+    fdf.createOrReplaceTempView("photons")
+    fdf = spark.sql("SELECT *, rhoIso*(CASE WHEN Photon_sceta=0.0 THEN 0.0725 WHEN Photon_sceta=1.0 THEN 0.0604 WHEN Photon_sceta=1.479 THEN 0.0320 WHEN Photon_sceta=2.0 THEN 0.0512 WHEN Photon_sceta=2.2 THEN 0.0766 WHEN Photon_sceta=2.3 THEN 0.0949 WHEN Photon_sceta=2.4 THEN 0.1160 END) AS rhoArea2 FROM photons")
+
+
     //Old UDF function for photonpassUDF
     //fdf = fdf.withColumn("passfilter", photonpassUDF($"Photon_chHadIso", $"Photon_neuHadIso", $"Photon_gammaIso", $"Photon_scEta", $"Photon_sthovere", $"Photon_sieie", $"Photon_pt", $"rhoArea0", $"rhoArea1", $"rhoArea2"))
     
