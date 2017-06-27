@@ -34,7 +34,12 @@ object DF {
          .groupBy("Muon_runNum", "Muon_lumisec", "Muon_evtNum")
          .agg(max("tmpmuons").alias("tmpmuons"))
          .select($"Muon_runNum", $"Muon_lumisec", $"Muon_evtNum", $"tmpmuons.Muon_pt", $"tmpmuons.Muon_eta", $"tmpmuons.Muon_phi")
-    maxdf.withColumn("Muon_Mass", lit(muonMass))
+    //Old UDF function
+    //maxdf.withColumn("Muon_Mass", lit(muonMass))
+  
+    //SQL Replacement
+    maxdf.createOrReplaceTempView("muons")
+    spark.sql("SELECT *, " + muonMass + " AS Muon_Mass FROM muons")
   }
 
   def createTauDF(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) : DataFrame = {
@@ -91,7 +96,13 @@ object DF {
                   .groupBy("Electron_runNum", "Electron_lumisec", "Electron_evtNum")
                   .agg(max("tmps").alias("tmps"))
                   .select($"Electron_runNum", $"Electron_lumisec", $"Electron_evtNum", $"tmps.Electron_pt", $"tmps.Electron_eta", $"tmps.Electron_phi")
-    ftdf1.withColumn("Electron_Mass", lit(electronMass))
+    
+    //Old UDF function
+    //ftdf1.withColumn("Electron_Mass", lit(electronMass))
+  
+    //SQL replacement
+    ftdf1.createOrReplaceTempView("Electrons")
+    spark.sql("SELECT *, " + electronMass + " AS Electron_Mass FROM Electrons")
   }
 
   def createPhotonDF(sc: SparkContext, spark: SparkSession, dname: String, info_df: DataFrame, chunkSize: Int) : DataFrame = {
@@ -147,8 +158,17 @@ object DF {
                     .agg(max("vs").alias("vs"), count(lit(1)).alias("N"))
                     .select($"AK4Puppi_runNum", $"AK4Puppi_lumisec", $"AK4Puppi_evtNum", $"vs.AK4Puppi_pt", $"vs.AK4Puppi_eta", $"vs.AK4Puppi_phi", $"vs.AK4Puppi_csv", $"vs.puppETphi", $"N")
     //Step 4: Add new columns
-    tdf1 = tdf1.withColumn("mindPhi", pdPhiUDF(999.99f)($"puppETphi", $"AK4Puppi_phi"))
-    tdf1 = tdf1.withColumn("mindFPhi", pdFPhiUDF(999.99f)($"puppETphi", $"AK4Puppi_phi"))
+    //Old UDF functions
+    //tdf1 = tdf1.withColumn("mindPhi", pdPhiUDF(999.99f)($"puppETphi", $"AK4Puppi_phi"))
+    //tdf1 = tdf1.withColumn("mindFPhi", pdFPhiUDF(999.99f)($"puppETphi", $"AK4Puppi_phi"))
+    
+    //SWL replacements
+    tdf1.createOrReplaceTempView("phi")
+    tdf1 = spark.sql("SELECT *, CASE WHEN ACOS(COS( puppETphi - AK4Puppi_phi )) < 999.99 THEN ACOS(COS(puppEtphi - AK4puppi_phi)) ELSE 999.99 END AS mindPhi FROM phi")
+
+    tdf1.createOrReplaceTempView("phi")
+    tdf1 = spark.sql("SELECT *, CASE WHEN (puppETphi > 0) AND (ACOS(COS(puppETphi - AK4Puppi_phi)) < 999.99) THEN ACOS(COS(puppETphi - AK4Puppi_phi)) ELSE 999.99 END AS mindFPhi FROM phi")
+
     // Step 5: Join with Vjets
     var tdf2 = tdf1.join(vjet_df,
         tdf1("AK4Puppi_runNum") <=> vjet_df("CA15Puppi_runNum")
