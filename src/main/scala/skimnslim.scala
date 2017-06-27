@@ -257,10 +257,19 @@ object DF {
     val vjet_pl = getPartitionInfo(dname, vaddjet_gn+"AddCA15Puppi.tau1", chunkSize)
     val vjet_rdd = sc.parallelize(vjet_pl, vjet_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, vaddjet_gn, vaddjet_ds, x.begin, x.end))
     var vjet_df = createH5DataFrame(spark, vjet_rdd, vaddjet_gn)
-    vjet_df = vjet_df.withColumn("tau21", taudivUDF($"AddCA15Puppi_tau1", $"AddCA15Puppi_tau2"))
-    vjet_df = vjet_df.withColumn("tau32", taudivUDF($"AddCA15Puppi_tau2", $"AddCA15Puppi_tau3"))
-    vjet_df = vjet_df.withColumn("mincsv", mincsvUDF($"AddCA15Puppi_sj1_csv", $"AddCA15Puppi_sj2_csv"))
-    vjet_df = vjet_df.withColumn("maxsubcsv", maxsubcsvUDF($"AddCA15Puppi_sj1_csv", $"AddCA15Puppi_sj2_csv", $"AddCA15Puppi_sj3_csv", $"AddCA15Puppi_sj4_csv"))
+    
+    //Old UDF functions
+    //vjet_df = vjet_df.withColumn("tau21", taudivUDF($"AddCA15Puppi_tau1", $"AddCA15Puppi_tau2"))
+    //vjet_df = vjet_df.withColumn("tau32", taudivUDF($"AddCA15Puppi_tau2", $"AddCA15Puppi_tau3"))
+    //vjet_df = vjet_df.withColumn("mincsv", mincsvUDF($"AddCA15Puppi_sj1_csv", $"AddCA15Puppi_sj2_csv"))
+    //vjet_df = vjet_df.withColumn("maxsubcsv", maxsubcsvUDF($"AddCA15Puppi_sj1_csv", $"AddCA15Puppi_sj2_csv", $"AddCA15Puppi_sj3_csv", $"AddCA15Puppi_sj4_csv"))
+    
+    //SQL Replacement
+    //taudivUDF
+    vjet_df.createOrReplaceTempView("vjet")
+    vjet_df = spark.sql("SELECT *, AddCA15Puppi_tau1/AddCA15Puppi_tau2 AS tau21, AddCA15Puppi_tau2/AddCA15Puppi_tau3 AS tau32, LEAST(AddCA15Puppi_sj1_csv, AddCA15Puppi_sj2_csv) AS mincsv, GREATEST(AddCA15Puppi_sj1_csv, AddCA15Puppi_sj2_csv, AddCA15Puppi_sj3_csv, AddCA15Puppi_sj4_csv) AS maxsubcsv FROM vjet")
+    
+
     vjet_df.drop("AddCA15Puppi_tau1", "AddCA15Puppi_tau2", "AddCA15Puppi_tau3", "AddCA15Puppi_sj1_csv", "AddCA15Puppi_sj2_csv", "AddCA15Puppi_sj3_csv", "AddCA15Puppi_sj4_csv")
   }
 
