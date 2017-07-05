@@ -101,6 +101,8 @@ object Filters {
     //version 1 (broken)
     //spark.sql("SELECT *, (SELECT effArea.col2  FROM (VALUES (0,0.0), (1,1.0), (2,1.479), (3,2.0), (4,2.2), (5,2.3), (6,2.4)) AS etaRange INNER JOIN (VALUES (0,0.0157), (1,0.0143), (2,0.0115), (3,0.0094), (4,0.0095), (5,0.0068), (6,0.0053)) AS effArea ON etaRange.col1 = effArea.col1 WHERE etaRange.col2=Photon_sceta) AS " + colname + " FROM " + tablename).show() // needs outer apply 
     //Too time consuming to make one giant script so values are hardcoded
+    
+
     photon_df.createOrReplaceTempView("photons")
     var fdf = spark.sql("SELECT *, rhoIso * (CASE WHEN Photon_sceta < 1.0 THEN 0.0157 WHEN Photon_sceta < 1.479 THEN 0.0143 WHEN Photon_sceta < 2.0 THEN 0.0115 WHEN Photon_sceta < 2.2 THEN 0.0094 WHEN Photon_sceta < 2.3 THEN 0.0095 WHEN Photon_sceta < 2.4 THEN 0.0068 WHEN Photon_sceta >= 2.4 THEN 0.0053 END) AS rhoArea0 FROM photons")
  
@@ -173,11 +175,11 @@ object Filters {
 
 
     //SQL Replacement for the old UDF func for passfilter1
-    //fdf.createOrReplaceTempView("elecFilter")
-    //fdf = spark.sql("SELECT *, CASE WHEN (Electron_isConv=1) THEN false ELSE (((ABS(Electron_scEta) < 1.479) AND ((iso < (0.126 * Electron_pt)) OR (ABS(Electron_dEtaIn) < 0.01520) OR (ABS(Electron_dPhiIn) < 0.21600) OR (Electron_sieie < 0.01140))) OR ((ABS(Electron_scEta) >= 1.479) AND ((iso < (0.144 * Electron_pt)) OR (ABS(Electron_dEtaIn) < 0.01130) OR (ABS(Electron_dPhiIn) < 0.23700) OR (Electron_sieie < 0.03520)))) END AS passfilter1 FROM (SELECT *, (Electron_chHadIso + GREATEST(CAST(0.0 AS DOUBLE), (Electron_gammaIso + Electron_neuHadIso - rhoEffarea))) AS iso FROM elecFilter)")
+    fdf.createOrReplaceTempView("elecFilter")
+    fdf = spark.sql("SELECT *, CASE WHEN (Electron_isConv=1) THEN false ELSE (((ABS(Electron_scEta) < 1.479) AND ((iso < (0.126 * Electron_pt)) OR (ABS(Electron_dEtaIn) < 0.01520) OR (ABS(Electron_dPhiIn) < 0.21600) OR (Electron_sieie < 0.01140))) OR ((ABS(Electron_scEta) >= 1.479) AND ((iso < (0.144 * Electron_pt)) OR (ABS(Electron_dEtaIn) < 0.01130) OR (ABS(Electron_dPhiIn) < 0.23700) OR (Electron_sieie < 0.03520)))) END AS passfilter1 FROM (SELECT *, (Electron_chHadIso + GREATEST(CAST(0.0 AS DOUBLE), (Electron_gammaIso + Electron_neuHadIso - rhoEffarea))) AS iso FROM elecFilter)")
 
     //Old UDF function for passfilter1
-    fdf = fdf.withColumn("passfilter1", elecpassUDF($"Electron_pt", $"Electron_isConv", $"Electron_chHadIso", $"Electron_gammaIso", $"Electron_neuHadIso", $"rhoEffarea", $"Electron_scEta", $"Electron_dEtaIn", $"Electron_dPhiIn", $"Electron_sieie"))
+    //fdf = fdf.withColumn("passfilter1", elecpassUDF($"Electron_pt", $"Electron_isConv", $"Electron_chHadIso", $"Electron_gammaIso", $"Electron_neuHadIso", $"rhoEffarea", $"Electron_scEta", $"Electron_dEtaIn", $"Electron_dPhiIn", $"Electron_sieie"))
 
     
     //SQL Replacement for passfilter2 UDF func
@@ -186,6 +188,8 @@ object Filters {
 
     //Old UDF function for passfiler2
     //fdf = fdf.withColumn("passfilter2", elecpass2UDF($"Electron_scEta", $"Electron_hovere", $"Electron_eoverp", $"Electron_ecalEnergy", $"Electron_d0", $"Electron_dz", $"Electron_nMissingHits"))
+    
+
     fdf.createOrReplaceTempView("Electrons")
     val fdf1 = spark.sql("SELECT * FROM Electrons WHERE Electron_pt >= 10 and Electron_eta < 2.5 and Electron_eta > -2.5 and passfilter1 and passfilter2")
     fdf1
@@ -224,7 +228,6 @@ object Filters {
     //SQL Replacement for UDF
     vjet_df.createOrReplaceTempView("Vjets")
     val fdf = spark.sql("SELECT *, (CA15Puppi_neuHadFrac >= 0.99) OR CA15Puppi_neuEmFrac >= 0.99 OR CA15Puppi_nParticles <= 1 OR ((CA15Puppi_eta < 2.4 AND CA15Puppi_eta > -2.4) AND (CA15Puppi_chHadFrac == 0 OR CA15Puppi_nCharged == 0 OR CA15Puppi_chEmFrac >= 0.99)) AS passfilter FROM VJets")
-
 
     fdf.createOrReplaceTempView("VJets")
     val fdf1 = spark.sql("SELECT * FROM VJets WHERE CA15Puppi_pt >=150 and CA15Puppi_eta < 2.5 and CA15Puppi_eta > -2.5 and passfilter")
