@@ -2,7 +2,12 @@ import ncsa.hdf.hdf5lib.H5;
 import ncsa.hdf.hdf5lib.HDF5Constants;
 import java.util.*;
 import ncsa.hdf.hdf5lib.structs.H5G_info_t;
-
+import ncsa.hdf.hdf5lib.structs.H5O_info_t;
+import ncsa.hdf.hdf5lib.callbacks.H5L_iterate_cb;
+import ncsa.hdf.hdf5lib.callbacks.H5L_iterate_t;
+import ncsa.hdf.hdf5lib.structs.H5L_info_t;
+import ncsa.hdf.hdf5lib.callbacks.H5O_iterate_cb;
+import ncsa.hdf.hdf5lib.callbacks.H5O_iterate_t;
 
 public class HStruct {
     /*****************************************
@@ -37,7 +42,7 @@ System.out.println("\t\t\t\t\t\tTotal Time to discover: " + time2);
             //test.mapHDF5("/global/cscratch1/sd/abuchan/testData");
         } catch (Exception e){
             //Error
-	    System.out.println("Failed reading file");
+	    System.out.println("Failed reading file: " + e.getMessage());
         }
 //test.dumpData();
 	System.out.println("Done");
@@ -54,7 +59,7 @@ System.out.println("\t\t\t\t\t\tTotal Time to discover: " + time2);
     ****************************************/
     public void mapHDF5(String dname) throws Exception{
       int file_id = H5.H5Fopen("test.h5", HDF5Constants.H5F_ACC_RDWR, HDF5Constants.H5P_DEFAULT);
-      mapHDF5_A(file_id, "/");
+      mapHDF5_E(file_id, "/");
     }
 
 
@@ -86,8 +91,6 @@ System.out.println("\t\t\t\t\t\tTotal Time to discover: " + time2);
     private void addPath(String path){
 	ds.addElement(new String(path));
     }
-
-
 
 
 
@@ -237,8 +240,106 @@ System.out.println("\t\t\t\t\t\tTotal Time to discover: " + time2);
         }
   }
 
+  /****************************************
+  **
+  **  public void mapHDF5_D(int fid, String path) throws Exception
+  **
+  **    Calls:  H5.H5Oget_info
+  **    	H5.H5Literate
+  **		H5L_iter_callback_O.callback
+  **
+  **	12MB sample: 0.0606sec
+  **
+  ****************************************/
+  public void mapHDF5_D(int fid, String path) throws Exception{
+    opdata od = new opdata();
+    H5O_info_t infobuf = H5.H5Oget_info(fid);
+    od.recurs = 0;
+    od.prev = null;
+    od.addr = infobuf.addr;
 
-
-
+    H5L_iterate_cb cb = new H5L_iter_callback_L();
+    H5.H5Literate(fid, HDF5Constants.H5_INDEX_NAME, HDF5Constants.H5_ITER_NATIVE, 0L, cb, od);
+  }
+  /****************************************
+  **
+  **  public void mapHDF5_E(int fid, String path) throws Exception
+  **
+  **    Calls:  H5.H5Oget_info
+  **            H5.H5Ovisit
+  **            H5L_iter_callback_L.callback
+  **
+  **    12MB sample: 0.0487sec
+  **
+  ****************************************/
+  public void mapHDF5_E(int fid, String path) throws Exception{
+    H5O_iterate_t od = new H5O_iter_data();
+    H5O_iterate_cb cb = new H5L_iter_callback_O();
+    H5.H5Ovisit(fid, HDF5Constants.H5_INDEX_NAME, HDF5Constants.H5_ITER_INC, cb, od);
+  }
 }
 
+
+
+/*******************	IGNORE BELOW THIS POINT	    *****************************/
+
+
+  /****************************************
+  **
+  **	public int callback(int group, String name, H5O_info_t info, H5O_iterate_t op_data)
+  **	class H5O_iter_data implements H5O_iterate_t  
+  **
+  **	Classes and functions used by mapHDF5_E
+  **
+  ****************************************/
+class H5L_iter_callback_O implements H5O_iterate_cb {
+        public int callback(int group, String name, H5O_info_t info, H5O_iterate_t op_data) {
+                //System.out.println("Group: " + group + "\nName: " + name + "\n"); 
+                return 0;
+        }
+}
+class H5O_iter_data implements H5O_iterate_t {
+            int recurs;
+        opdata prev;
+        long addr;
+}
+
+
+  /****************************************
+  **
+  **    public int callback(int group, String name, H5O_info_t info, H5O_iterate_t op_data)
+  **    class H5L_iter_data implements H5L_iterate_t
+  **
+  **    Classes and functions used by mapHDF5_D
+  **
+  ****************************************/
+class opdata implements H5L_iterate_t {
+        int recurs;
+        opdata prev;
+        long addr;
+}
+class H5L_iter_callback_L implements H5L_iterate_cb {
+	public int callback(int group, String name, H5L_info_t info, H5L_iterate_t op_data) {
+		System.out.println("Group: " + group + "\nName: " + name + "\n");
+		
+		try{
+			H5O_info_t infobuf = H5.H5Oget_info_by_name (group, name, HDF5Constants.H5P_DEFAULT);
+			if(infobuf.type == HDF5Constants.H5O_TYPE_GROUP){
+				opdata od = new opdata();
+    				//H5O_info_t infobuf = H5.H5Oget_info(group);
+    				od.recurs = 0;
+    				od.prev = null;
+    				od.addr = infobuf.addr;
+				H5L_iterate_cb cb = new H5L_iter_callback_L();
+				H5.H5Literate_by_name (group, name, HDF5Constants.H5_INDEX_NAME,
+                                                      HDF5Constants.H5_ITER_NATIVE, 0L, cb,od,
+                                                      HDF5Constants.H5P_DEFAULT);
+			}
+		}catch (Exception e){
+        	    //Error
+        	    //System.out.println("Failed to iterate: " + e.getMessage());
+       		}
+		
+		return 0;
+	}
+}
