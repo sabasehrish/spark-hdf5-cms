@@ -182,8 +182,7 @@ object DF {
     
     //SQL replacement for UDF
     tdf2.createOrReplaceTempView("tdf2")
-    tdf2 = spark.sql("SELECT *, SQRT(((AK4Puppi_eta - CA15Puppi_eta)*(AK4Puppi_eta - CA15Puppi_eta)) + (dphi_adjusted * dphi_adjusted)) AS deltaR FROM (SELECT *, CASE WHEN (AK4Puppi_phi - CA15Puppi_phi) >= PI() THEN (AK4Puppi_phi - CA15Puppi_phi) - PI() WHEN (AK4Puppi_phi - CA15Puppi_phi) < -PI() THEN (AK4Puppi_phi - CA15Puppi_phi) + PI() ELSE (AK4Puppi_phi - CA15Puppi_phi) END AS dphi_adjusted FROM tdf2)")
-
+    tdf2 = spark.sql("SELECT *, SQRT(((AK4Puppi_eta - CA15Puppi_eta)*(AK4Puppi_eta - CA15Puppi_eta)) + POWER(CASE WHEN (AK4Puppi_phi - CA15Puppi_phi) >= PI() THEN (AK4Puppi_phi - CA15Puppi_phi) - PI() WHEN (AK4Puppi_phi - CA15Puppi_phi) < -PI() THEN (AK4Puppi_phi - CA15Puppi_phi) + PI() ELSE (AK4Puppi_phi - CA15Puppi_phi) END, 2)) AS deltaR FROM tdf2")
 
     tdf2.createOrReplaceTempView("tdf2")
     val tdf3 = spark.sql("SELECT * from tdf2 WHERE deltaR > 1.5").groupBy("AK4Puppi_runNum", "AK4Puppi_lumiSec", "AK4Puppi_evtNum").count()
