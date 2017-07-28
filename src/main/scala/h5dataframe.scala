@@ -39,4 +39,63 @@ object H5DataFrame {
     }
     return schema
   }
- }
+  
+  /*************************************
+  **
+  **  def getGroupName(p: String):String
+  **
+  **  takes HDF5 path in and returns group name
+  **
+  **	IN:  /Photon/Photon.passElectronVeto
+  **	OUT: /Photon/
+  **
+  **************************************/ 
+  def getGroupName(p: String):String = {
+    var path = p.split("/")
+    var s = ""
+    for(i <- 0 to (path.length - 2)){
+      s = s + path(i) + "/"
+    }
+    return s
+  }
+  /*************************************
+  **
+  **  def getDatasetName(p: String):String
+  **
+  **  takes HDF5 path in and returns dataset name
+  **  
+  **    IN:  /Photon/Photon.passElectronVeto
+  **    OUT: Photon.passElectronVeto 
+  **  
+  **************************************/ 
+  def getDatasetName(p: String):String = {
+    var path = p.split("/") 
+    return path(path.length - 1)
+  }
+  /*************************************
+  **
+  **  def createSchema(paths: Array[String]):Map[String,org.apache.spark.sql.types.StructType]
+  **
+  **  iterates over the array of paths and creates a map structure. Each entry of the map is a group
+  **  where the key is the group name and the values is a StructType that represents a schema
+  **    
+  **  	IN:  Array("/CA15Puppi/CA15Puppi.unc", "/Electron/Electron.chHadIso", "...") 
+  **	OUT: Map[String,org.apache.spark.sql.types.StructType]
+  **  
+  **************************************/
+  def createSchema(paths: Array[String]):Map[String,org.apache.spark.sql.types.StructType] = {
+    var m:Map[String, org.apache.spark.sql.types.StructType] = Map()
+    for(x <- paths){
+	var group =  getGroupName(x)
+	var dsName = getDatasetName(x)
+	if(m contains group){
+	    m = m + (group -> m(group).add(StructField(dsName,FloatType,false)))
+	}else{
+	    m = m + (group -> StructType(List(StructField(dsName, FloatType, false))))
+	}
+    }
+    return m
+  }
+
+}
+ 
