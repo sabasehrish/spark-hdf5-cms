@@ -121,15 +121,12 @@ def filterElectronDF2(df):
 ##  SQL version of filterElectronDF
 ##
 ########################
-def filterElectronDFSQL(df):
+def filterElectronDFSQL(dfS):
     #print(locals())
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
-    dfS = pysql("SELECT *,rhoIso * (CASE WHEN Electron_eta < 0.8 THEN 0.1752 WHEN Electron_eta < 1.3 THEN 0.1862 WHEN Electron_eta < 2.0 THEN 0.1411 WHEN Electron_eta < 2.2 THEN 0.1534 WHEN Electron_eta < 2.3 THEN 0.1903 WHEN Electron_eta < 2.4 THEN 0.2243 WHEN Electron_eta >= 2.4 THEN 0.2687 END) AS rhoEffarea FROM df")
     pysql = lambda q: pdsql.sqldf(q, {'dfS':dfS})
+    dfS = pysql("SELECT *,rhoIso * (CASE WHEN Electron_eta < 0.8 THEN 0.1752 WHEN Electron_eta < 1.3 THEN 0.1862 WHEN Electron_eta < 2.0 THEN 0.1411 WHEN Electron_eta < 2.2 THEN 0.1534 WHEN Electron_eta < 2.3 THEN 0.1903 WHEN Electron_eta < 2.4 THEN 0.2243 WHEN Electron_eta >= 2.4 THEN 0.2687 END) AS rhoEffarea FROM dfS")
     dfS = pysql("SELECT *, CASE WHEN (Electron_isConv=1) THEN 0 ELSE (((ABS(Electron_scEta) < 1.479) AND (((Electron_chHadIso + (CASE WHEN CAST(0.0 AS DOUBLE) < (Electron_gammaIso + Electron_neuHadIso - rhoEffarea) THEN (Electron_gammaIso + Electron_neuHadIso - rhoEffarea) ELSE 0 END)) < (0.126 * Electron_pt)) OR (ABS(Electron_dEtaIn) < 0.01520) OR (ABS(Electron_dPhiIn) < 0.21600) OR (Electron_sieie < 0.01140))) OR ((ABS(Electron_scEta) >= 1.479) AND (((Electron_chHadIso + (CASE WHEN CAST(0.0 AS DOUBLE) < (Electron_gammaIso + Electron_neuHadIso - rhoEffarea) THEN (Electron_gammaIso + Electron_neuHadIso - rhoEffarea) ELSE 0 END)) < (0.144 * Electron_pt)) OR (ABS(Electron_dEtaIn) < 0.01130) OR (ABS(Electron_dPhiIn) < 0.23700) OR (Electron_sieie < 0.03520)))) END AS passfilter1 FROM dfS")
-    pysql = lambda q: pdsql.sqldf(q, {'dfS':dfS})
     dfS = pysql("SELECT *, (((ABS(Electron_scEta) < 1.479) AND ( (Electron_hovere < 0.18100) OR (ABS(1.0 - Electron_eoverp) < (0.20700* Electron_ecalEnergy)) OR (ABS(Electron_d0) < 0.05640) OR (ABS(Electron_dz) < 0.47200) OR (Electron_nMissingHits <=  2))) OR ((ABS(Electron_scEta) >= 1.479) AND ( (Electron_hovere < 0.11600) OR (ABS(1.0 - Electron_eoverp) < (0.17400* Electron_ecalEnergy)) OR (ABS(Electron_d0) < 0.22200) OR (ABS(Electron_dz) < 0.92100) OR (Electron_nMissingHits <=  3)))) AS passfilter2 FROM dfS")
-    pysql = lambda q: pdsql.sqldf(q, {'dfS':dfS})
     dfS = pysql("SELECT * FROM dfS WHERE Electron_pt >= 10 and Electron_eta < 2.5 and Electron_eta > -2.5 and passfilter1 and passfilter2")
     return dfS
 
@@ -147,7 +144,6 @@ def filterMuonDF(df, kPOG):
 def filterMuonDFsql(df, kPOG):
     pysql = lambda q: pdsql.sqldf(q, {'df':df})
     df = pysql("SELECT *, (((Muon_pogIDBits & " + str(kPOG) + ")!=0)  AND ((Muon_chHadIso + (CASE WHEN Muon_neuHadIso + Muon_gammaIso - (0.5* Muon_puIso) < 0 THEN 0 ELSE Muon_neuHadIso + Muon_gammaIso - (0.5* Muon_puIso) END )) < (0.12* Muon_pt))) AS passfilter FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
     return pysql("SELECT * FROM df WHERE Muon_pt >= 10 and Muon_eta > -2.4 and Muon_eta < 2.4 and passfilter")
 
 #########################
@@ -164,7 +160,6 @@ def filterTauDF(df):
 def filterTauDFsql(df):
     pysql = lambda q: pdsql.sqldf(q, {'df':df})
     df = pysql("SELECT *, (((Tau_hpsDisc & 65536) = 65536) AND (Tau_rawIso3Hits <= 5)) AS passfilter FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
     return pysql("SELECT * FROM df WHERE Tau_pt >= 10 and Tau_eta > -2.3 and Tau_eta < 2.3 and passfilter")
 
 #########################
@@ -192,14 +187,10 @@ def filterPhotonDF(df):
 def filterPhotonDFsqlBroken(df):
     pysql = lambda q: pdsql.sqldf(q, {'df':df})
     df = pysql("SELECT *, rhoIso * (CASE WHEN Photon_sceta < 1.0 THEN 0.0157 WHEN Photon_sceta < 1.479 THEN 0.0143 WHEN Photon_sceta < 2.0 THEN 0.0115 WHEN Photon_sceta < 2.2 THEN 0.0094 WHEN Photon_sceta < 2.3 THEN 0.0095 WHEN Photon_sceta < 2.4 THEN 0.0068 WHEN Photon_sceta >= 2.4 THEN 0.0053 END) AS rhoArea0 FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
     df = pysql("SELECT *, rhoIso * (CASE WHEN Photon_sceta < 1.0 THEN 0.0143 WHEN Photon_sceta < 1.479 THEN 0.0210 WHEN Photon_sceta < 2.0 THEN 0.0147 WHEN Photon_sceta < 2.2 THEN 0.0082 WHEN Photon_sceta < 2.3 THEN 0.0124 WHEN Photon_sceta < 2.4 THEN 0.0186 WHEN Photon_sceta >= 2.4 THEN 0.0320 END) AS rhoArea1 FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
     df = pysql("SELECT *, rhoIso * (CASE WHEN Photon_sceta < 1.0 THEN 0.0725 WHEN Photon_sceta < 1.479 THEN 0.0604 WHEN Photon_sceta < 2.0 THEN 0.0320 WHEN Photon_sceta < 2.2 THEN 0.0512 WHEN Photon_sceta < 2.3 THEN 0.0766 WHEN Photon_sceta < 2.4 THEN 0.0949 WHEN Photon_sceta >= 2.4 THEN 0.1160 END) AS rhoArea2 FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
 #    df = pysql("SELECT *, CASE WHEN (Photon_sthovere <= 0.05) THEN true ELSE (ABS(Photon_scEta) <= 1.479 AND ((Photon_sieie <= 0.0103) OR ((CASE WHEN(Photon_chHadIso - rhoarea0) < 0.0 THEN 0 ELSE (Photon_chHadIso - rhoarea0) END) <= 2.44) OR ((CASE WHEN(Photon_neuHadIso - rhoarea1) < 0.0 THEN 0 ELSE (Photon_neuHadIso - rhoarea1) END) <= (2.57 + EXP(0.0044* Photon_pt*0.5809))) OR ((CASE WHEN(Photon_gammaIso - rhoarea2) < 0.0 THEN 0 ELSE (Photon_gammaIso - rhoarea2) END) <= (1.92+0.0043* Photon_pt)))) OR (ABS(Photon_scEta) > 1.479 AND  ((Photon_sieie <= 0.0277) OR ((CASE WHEN(Photon_chHadIso - rhoarea0) <0.0 THEN  0.0 ELSE (CASE WHEN(Photon_chHadIso - rhoarea0) END) <= 1.84) OR ((CASE WHEN(Photon_neuHadIso - rhoarea1) < 0.0 THEN 0.0 ELSE (Photon_neuHadIso - rhoarea1) END) <= (4.00 + EXP(0.0040* Photon_pt*0.9402))) OR (GREATEST((Photon_gammaIso - rhoarea2), 0.0) <= (2.15+0.0041* Photon_pt)))) END AS psalter FROM df")
 #    df = pysql("SELECT *, CASE WHEN (Photon_sthovere <= 0.05) THEN 1 ELSE (ABS(Photon_scEta) <= 1.479 AND ((Photon_sieie <= 0.0103) OR ((CASE WHEN(Photon_chHadIso - rhoarea0) < 0.0 THEN 0.0 ELSE (Photon_chHadIso - rhoarea0) END) <= 2.44) OR ((CASE WHEN(Photon_neuHadIso - rhoarea1) < 0.0 THEN 0.0 ELSE (Photon_neuHadIso - rhoarea1) END) <= (2.57 + EXP(0.0044* Photon_pt*0.5809))) OR (GREATEST((Photon_gammaIso - rhoarea2), 0.0) <= (1.92+0.0043* Photon_pt)))) OR (ABS(Photon_scEta) > 1.479 AND  ((Photon_sieie <= 0.0277) OR (GREATEST((Photon_chHadIso - rhoarea0), 0.0) <= 1.84) OR (GREATEST((Photon_neuHadIso - rhoarea1), 0.0) <= (4.00 + EXP(0.0040* Photon_pt*0.9402))) OR (GREATEST((Photon_gammaIso - rhoarea2), 0.0) <= (2.15+0.0041* Photon_pt)))) END AS psalter FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
     return pysql("Select * FROM df WHERE Photon_pt >= 175 and Photon_eta < 1.4442 and Photon_eta > -1.4442 and passfilter")
 
 #########################
@@ -216,7 +207,6 @@ def filterJetDF(df):
 def filterJetDFsql(df):
     pysql = lambda q: pdsql.sqldf(q, {'df':df})
     df = pysql("SELECT *, (AK4Puppi_neuHadFrac >= 0.99) OR AK4Puppi_neuEmFrac >= 0.99 OR AK4Puppi_nParticles <= 1 OR ((AK4Puppi_eta < 2.4 AND AK4Puppi_eta > -2.4) AND (AK4Puppi_chHadFrac == 0 OR AK4Puppi_nCharged == 0 OR AK4Puppi_chEmFrac >= 0.99)) AS passfilter FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
     return pysql("SELECT * FROM df WHERE AK4Puppi_pt >=30 and AK4Puppi_eta < 4.5 and AK4Puppi_eta > -4.5 and passfilter")
 
 #########################
@@ -233,7 +223,6 @@ def filterVJetDF(df):
 def filterVJetDFsql(df):
     pysql = lambda q: pdsql.sqldf(q, {'df':df})
     df = pysql("SELECT *, (CA15Puppi_neuHadFrac >= 0.99) OR CA15Puppi_neuEmFrac >= 0.99 OR CA15Puppi_nParticles <= 1 OR ((CA15Puppi_eta < 2.4 AND CA15Puppi_eta > -2.4) AND (CA15Puppi_chHadFrac == 0 OR CA15Puppi_nCharged == 0 OR CA15Puppi_chEmFrac >= 0.99)) AS passfilter FROM df")
-    pysql = lambda q: pdsql.sqldf(q, {'df':df})
     return pysql("SELECT * FROM df WHERE CA15Puppi_pt >=150 and CA15Puppi_eta < 2.5 and CA15Puppi_eta > -2.5 and passfilter")
 
 ######################################################################################################
