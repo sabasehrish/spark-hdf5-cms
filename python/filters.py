@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import pandasql as pdsql
 import time
+import math
 
 ###########################################################################################
 ##
@@ -67,20 +68,20 @@ def photonpassUDF(e):
     neuiso = max((e.Photon_neuHadIso - e.rhoarea1), 0.0)
     phoiso = max((e.Photon_gammaIso - e.rhoarea2), 0.0)
 
-    if (e.Photon_sthovere <= 0.05): True
-    (abs(e.Photon_scEta) <= 1.479 and ((e.Photon_sieie    <= 0.0103) or (e.Photon_chiso <= 2.44) or (e.Photon_neuiso <= (2.57 + exp(0.0044*e.Photon_pt*0.5809))) or
-                                    (e.Photon_phoiso <= (1.92 + 0.0043 * e.Photon_pt)))) or (abs(e.Photon_scEta) > 1.479 and  ((e.Photon_sieie    <= 0.0277) or
-                                    (e.Photon_chiso <= 1.84) or
-                                    (e.Photon_neuiso <= (4.00 + exp(0.0040*e.Photon_pt*0.9402))) or
-                                    (e.Photon_phoiso <= (2.15+0.0041*e.Photon_pt))))
+    if (e.Photon_sthovere <= 0.05): return True
+    return (abs(e.Photon_scEta) <= 1.479 and ((e.Photon_sieie    <= 0.0103) or (chiso <= 2.44) or (neuiso <= (2.57 + math.exp(0.0044*e.Photon_pt*0.5809))) or
+                                    (phoiso <= (1.92 + 0.0043 * e.Photon_pt)))) or (abs(e.Photon_scEta) > 1.479 and  ((e.Photon_sieie    <= 0.0277) or
+                                    (chiso <= 1.84) or
+                                    (neuiso <= (4.00 + math.exp(0.0040*e.Photon_pt*0.9402))) or
+                                    (phoiso <= (2.15+0.0041*e.Photon_pt))))
 
 def EffArea(eta, eta_range, eff_area):
     idx = np.searchsorted(eta_range,eta)
     idx = idx-1 if idx > 0 else 0
     return eff_area[idx]
 
-def rhoeffareaPhoUDF(rho, eta, eta_range, eff_area):
-    return rho*EffArea(eta, eta_range, eff_area)
+def rhoeffareaPhoUDF(e, eta_range, eff_area):
+    return e.rhoIso *EffArea(e.Photon_scEta, eta_range, eff_area)
 
 def jetpassUDF(e):
     return (e.AK4Puppi_neuHadFrac >= 0.99) or     (e.AK4Puppi_neuEmFrac >= 0.99)   or   (e.AK4Puppi_nParticles <= 1 )    or ((e.AK4Puppi_eta < 2.4 and e.AK4Puppi_eta > -2.4) and (e.AK4Puppi_chHadFrac == 0 or e.AK4Puppi_nCharged == 0 or e.AK4Puppi_chEmFrac >= 0.99))
@@ -173,9 +174,9 @@ def filterPhotonDF(df):
     eff_area_1 = [0.0143, 0.0210, 0.0147, 0.0082, 0.0124, 0.0186, 0.0320]
     eff_area_2 = [0.0725, 0.0604, 0.0320, 0.0512, 0.0766, 0.0949, 0.1160]
 
-    df['rhoArea0'] = df.apply(lambda x: rhoeffareaPhoUDF(x.rhoIso,x.Photon_sceta,eta_range, eff_area_0))
-    df['rhoArea1'] = df.apply(lambda x: rhoeffareaPhoUDF(x.rhoIso,x.Photon_sceta,eta_range, eff_area_1))
-    df['rhoArea2'] = df.apply(lambda x: rhoeffareaPhoUDF(x.rhoIso,x.Photon_sceta,eta_range, eff_area_2))
+    df['rhoarea0'] = df.apply(lambda x: rhoeffareaPhoUDF(x,eta_range, eff_area_0),1)
+    df['rhoarea1'] = df.apply(lambda x: rhoeffareaPhoUDF(x,eta_range, eff_area_1),1)
+    df['rhoarea2'] = df.apply(lambda x: rhoeffareaPhoUDF(x,eta_range, eff_area_2),1)
 
     df = df[df.apply(lambda x: photonpassUDF(x),1)]
     return df[(df.Photon_pt >= 175) & (abs(df.Photon_eta) < 1.4442)]
@@ -243,7 +244,7 @@ def getDF(group, f):
 ###################
 def setup():
     f = h5py.File('/Users/abuchan/Documents/programming/data/test.h5', 'r') 
-    elec_df = getDF("/Electron/", f)	# Scala: createElectronDF()
+    elec_df = getDF("/Muon/", f)	# Scala: createElectronDF()
     info_df = getDF("/Info/", f)	# Scala: createInfoDF()
     return elec_df.join(info_df)
 
@@ -258,9 +259,9 @@ def test():
     df2 = setup()
 
     t1 = time.time()
-    temp1 = filterElectronDFSQL(df1)
+    temp1 = filterMuonDFsql(df1,2)
     t2 = time.time()
-    temp2 = filterElectronDF(df2)
+    temp2 = filterMuonDF(df2,2)
     t3 = time.time()
 
     print("SQL size: " + str(temp1.shape))
