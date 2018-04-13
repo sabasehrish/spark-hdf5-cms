@@ -67,9 +67,9 @@ object DF {
     val info_pl = getPartitionInfo(dname, info_gn+"evtNum", chunkSize)
     val info_rdd = sc.parallelize(info_pl, info_pl.length).flatMap(x=> readDatasets(x.dname+x.fname, info_gn, info_ds, x.begin, x.end))
     val info_df = createH5DataFrame(spark, info_rdd, info_gn)
-    info_df.createOrReplaceTempView("infot")
-    val fdf = spark.sql("SELECT * FROM infot WHERE pfMET > 200 or puppET > 200")
-    fdf
+    //info_df.createOrReplaceTempView("infot")
+    //val fdf = spark.sql("SELECT * FROM infot WHERE pfMET > 200 or puppET > 200")
+    info_df
   }
 
   def createElectronDF(sc: SparkContext, spark: SparkSession, dname: String, chunkSize: Int) : DataFrame = {
@@ -101,8 +101,9 @@ object DF {
     //ftdf1.withColumn("Electron_Mass", lit(electronMass))
   
     //SQL replacement
-    ftdf1.createOrReplaceTempView("Electrons")
-    spark.sql("SELECT *, " + electronMass + " AS Electron_Mass FROM Electrons")
+    //ftdf1.createOrReplaceTempView("Electrons")
+    //spark.sql("SELECT *, " + electronMass + " AS Electron_Mass FROM Electrons")
+    ftdf1
   }
 
   def createPhotonDF(sc: SparkContext, spark: SparkSession, dname: String, info_df: DataFrame, chunkSize: Int) : DataFrame = {

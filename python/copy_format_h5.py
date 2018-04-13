@@ -19,16 +19,18 @@ def copy_format(f_in, f_out):
 		print g
 		grp = f_out.create_group(g)
         	# create datasets for sample type and index
-		grp.create_dataset('/'+g+'/'+"stype", shape=(0,), 
-				   dtype=np.int16,maxshape=(None,))
-		grp.create_dataset('/'+g+'/'+"snum", shape=(0,), 
-				   dtype=np.int16,maxshape=(None,))
+		#grp.create_dataset('/'+g+'/'+"stype", shape=(0,), 
+		#		   dtype=np.int16,maxshape=(None,))
+		#grp.create_dataset('/'+g+'/'+"snum", shape=(0,), 
+		#		   dtype=np.int16,maxshape=(None,))
 		for d in f_in['/'+g].keys():
 			name = '/'+g+'/'+d
+                        print name
 			src = f_in[name]
 			dset = grp.create_dataset(d, shape=(0,), 
 						  dtype=src.dtype,maxshape=(None,))
-			# print name, dset.size, dset.shape
+			print name, dset.size, dset.shape
+
 
 def make_prototype(in_dir, out_dir):
     flist = glob.glob(in_dir + "/*")

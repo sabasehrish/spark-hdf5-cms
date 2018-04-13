@@ -1,4 +1,5 @@
 import Histo._
+import Counts._
 import org.apache.spark.SparkContext
 import org.apache.spark.sql.SparkSession
 
@@ -11,7 +12,6 @@ object runmain {
     } else {
       val dname = args(0)
       val chunkSize = args(1).toInt	//2nd argument defines chunksize when reading h5 files in getPartitionInfo()
-      println("Chunk Size: " + chunkSize)
       createHistogram(sc, spark, dname, chunkSize)
     }
   }

@@ -12,7 +12,7 @@ import pandas as pd
 # example paths on Cori scrath, *_st_40 => striped on 40 OSTs 
 #'/global/cscratch1/sd/ssehrish/h5out_st_40/*' 
 #'/global/cscratch1/sd/ssehrish/h5out_all_st/*'
-dirname =
+dirname='/global/cscratch1/sd/ssehrish/h5out_merged/*' 
 
 # Need to revisit how we want to describe column names and paths 
 info_ds_path=np.array(('/Info/runNum/', 'Info/lumiSec/', '/Info/evtNum/', '/Info/rhoIso/', '/Info/metFilterFailBits/', '/Info/pfMET/', '/Info/pfMETphi/', '/Info/puppET/', '/Info/puppETphi/'))
@@ -30,10 +30,11 @@ nranks = MPI.COMM_WORLD.size
 def create_df(ds_path_list, column_list):
     fv = np.vectorize(read_ds, otypes=[np.ndarray])
     ds = fv(ds_path_list)
-    ds = np.array(ds.tolist()).transpose()
+    ds = np.array(ds.tolist()) #.transpose()
+    ds.shape = len(ds[0]),20
     df = pd.DataFrame(ds)
     df.columns = column_list
-    return df
+    return ds
 
 # read one data set
 # input: HDF5 dataset name
@@ -55,7 +56,7 @@ def read_ds(dsname):
 # input: pandas dataframe
 # output: row count  
 def count_rows(df):
-    local_cnt = len(df.index) #df.shape[0]
+    local_cnt = len(df) #df.shape[0]
     global_cnt = MPI.COMM_WORLD.reduce (local_cnt, op=MPI.SUM, root=0)
     if rank==0:
         print global_cnt
